@@ -27,6 +27,7 @@ export class Controls {
     };
 
     this.shootHeld = false;
+    this.shootChargeVisual = 0;
 
     this.joystickActive = false;
 
@@ -600,6 +601,26 @@ export class Controls {
   // ------------------------------------------------
   // GET MOVEMENT
   // ------------------------------------------------
+
+  setShootChargeVisual(amount) {
+    const charge = Math.max(0, Math.min(1, amount || 0));
+    this.shootChargeVisual = charge;
+
+    const percent = Math.round(charge * 100);
+
+    this.shootButton.style.background =
+      `linear-gradient(to top,
+        rgba(255,255,255,0.92) 0%,
+        rgba(255,255,255,0.92) ${percent}%,
+        rgba(15,35,58,0.82) ${percent}%,
+        rgba(15,35,58,0.82) 100%)`;
+
+    this.shootButton.style.color =
+      charge >= 0.52 ? "#07111f" : "#ffffff";
+
+    this.shootButton.textContent =
+      charge > 0 ? `SHOOT ${percent}%` : "SHOOT";
+  }
 
   isShootHeld() {
     return this.shootHeld;
