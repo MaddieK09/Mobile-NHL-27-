@@ -93,6 +93,13 @@ export class HockeyPuck {
 
     this.possessedBy = null;
 
+    // Shot charging / release.
+    this.shotCharge = 0;
+    this.maxShotChargeTime = 1.15;
+    this.minShotPower = 11;
+    this.maxShotPower = 28;
+    this.isChargingShot = false;
+
     // Temporary stick-blade target until the player model
     // gets an actual animated stick / blade attachment point.
     this.carrySide =
@@ -335,6 +342,8 @@ export class HockeyPuck {
     this.possessedBy = null;
     this.pickupCooldown =
       this.repickupDelay;
+    this.isChargingShot = false;
+    this.shotCharge = 0;
   }
 
   losePossession(
@@ -617,6 +626,90 @@ export class HockeyPuck {
         outward
       );
     }
+  }
+
+  // ------------------------------------------------
+  // SHOT CHARGE
+  // ------------------------------------------------
+
+  startShotCharge() {
+    if (!this.possessedBy) {
+      return false;
+    }
+
+    this.isChargingShot = true;
+    this.shotCharge = 0;
+
+    return true;
+  }
+
+  updateShotCharge(delta) {
+    if (
+      !this.isChargingShot ||
+      !this.possessedBy
+    ) {
+      return;
+    }
+
+    this.shotCharge =
+      Math.min(
+        this.maxShotChargeTime,
+        this.shotCharge + delta
+      );
+  }
+
+  releaseChargedShot(
+    direction = null
+  ) {
+    if (
+      !this.isChargingShot ||
+      !this.possessedBy
+    ) {
+      this.isChargingShot = false;
+      this.shotCharge = 0;
+      return false;
+    }
+
+    const t =
+      THREE.MathUtils.clamp(
+        this.shotCharge /
+          this.maxShotChargeTime,
+        0,
+        1
+      );
+
+    // Ease the power curve so short taps stay useful while
+    // a full hold produces a noticeably harder shot.
+    const eased =
+      1 -
+      Math.pow(
+        1 - t,
+        2
+      );
+
+    const power =
+      THREE.MathUtils.lerp(
+        this.minShotPower,
+        this.maxShotPower,
+        eased
+      );
+
+    this.isChargingShot = false;
+    this.shotCharge = 0;
+
+    return this.shoot(
+      power,
+      direction
+    );
+  }
+
+  getShotCharge01() {
+    return THREE.MathUtils.clamp(
+      this.shotCharge /
+        this.maxShotChargeTime,
+      0,
+      1
+    );
   }
 
   // ------------------------------------------------
