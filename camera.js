@@ -209,32 +209,25 @@ export class CameraManager {
     const playerPosition =
       this.getPlayerPosition();
 
-    this.updatePlayerVectors();
-
-    // Close landscape follow camera.
+    // NHL-style dynamic follow camera:
+    // follow the skater's POSITION, not their facing.
     //
-    // Slightly above and behind the player, with the
-    // view pushed ahead in the skating direction.
-    this.desiredPosition
-      .copy(playerPosition)
-      .addScaledVector(
-        this.forward,
-        -9.5
-      )
-      .addScaledVector(
-        this.up,
-        7.2
-      );
+    // This keeps "up" on the joystick consistent instead
+    // of making the whole camera swing around every time
+    // the player turns.
+    this.desiredPosition.set(
+      playerPosition.x * 0.82,
+      10.5,
+      playerPosition.z + 15.5
+    );
 
-    this.desiredLookTarget
-      .copy(playerPosition)
-      .addScaledVector(
-        this.forward,
-        4.8
-      );
-
-    this.desiredLookTarget.y =
-      0.9;
+    // Look slightly ahead toward the far end of the rink,
+    // but keep the rink orientation stable.
+    this.desiredLookTarget.set(
+      playerPosition.x,
+      0.7,
+      playerPosition.z - 3.8
+    );
   }
 
   calculateClassic() {
@@ -450,4 +443,3 @@ export class CameraManager {
     );
   }
 }
-
