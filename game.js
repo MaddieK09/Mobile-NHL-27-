@@ -163,6 +163,172 @@ const puck = new HockeyPuck(
 );
 
 // --------------------------------------------------
+// SHOT AIM INDICATOR
+// --------------------------------------------------
+
+const aimIndicatorGroup =
+  new THREE.Group();
+
+const aimLineMaterial =
+  new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.72,
+    depthTest: false
+  });
+
+const aimLineGeometry =
+  new THREE.BufferGeometry();
+
+const aimLine =
+  new THREE.Line(
+    aimLineGeometry,
+    aimLineMaterial
+  );
+
+aimLine.renderOrder = 50;
+
+const aimTipGeometry =
+  new THREE.ConeGeometry(
+    0.18,
+    0.46,
+    18
+  );
+
+const aimTipMaterial =
+  new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.82,
+    depthTest: false
+  });
+
+const aimTip =
+  new THREE.Mesh(
+    aimTipGeometry,
+    aimTipMaterial
+  );
+
+aimTip.rotation.x =
+  Math.PI / 2;
+
+aimTip.renderOrder = 51;
+
+aimIndicatorGroup.add(
+  aimLine
+);
+
+aimIndicatorGroup.add(
+  aimTip
+);
+
+aimIndicatorGroup.visible =
+  false;
+
+scene.add(
+  aimIndicatorGroup
+);
+
+const aimStart =
+  new THREE.Vector3();
+
+const aimEnd =
+  new THREE.Vector3();
+
+function updateShotAimIndicator(
+  direction,
+  charge
+) {
+  if (
+    !direction ||
+    direction.lengthSq() <
+      0.0001
+  ) {
+    aimIndicatorGroup.visible =
+      false;
+
+    return;
+  }
+
+  const puckPosition =
+    puck.getPosition();
+
+  const normalizedDirection =
+    direction.clone();
+
+  normalizedDirection.y = 0;
+  normalizedDirection.normalize();
+
+  const length =
+    THREE.MathUtils.lerp(
+      2.2,
+      6.5,
+      THREE.MathUtils.clamp(
+        charge,
+        0,
+        1
+      )
+    );
+
+  aimStart.set(
+    puckPosition.x,
+    0.035,
+    puckPosition.z
+  );
+
+  aimEnd
+    .copy(
+      aimStart
+    )
+    .addScaledVector(
+      normalizedDirection,
+      length
+    );
+
+  aimLine.geometry.setFromPoints([
+    aimStart,
+    aimEnd
+  ]);
+
+  aimTip.position.copy(
+    aimEnd
+  );
+
+  // Cone's local +Y axis is the arrow direction before
+  // the X rotation above, so orient the group on the ice.
+  const angle =
+    Math.atan2(
+      normalizedDirection.x,
+      normalizedDirection.z
+    );
+
+  aimTip.rotation.set(
+    Math.PI / 2,
+    0,
+    -angle
+  );
+
+  const opacity =
+    THREE.MathUtils.lerp(
+      0.45,
+      0.95,
+      charge
+    );
+
+  aimLineMaterial.opacity =
+    opacity;
+
+  aimTipMaterial.opacity =
+    Math.min(
+      1,
+      opacity + 0.08
+    );
+
+  aimIndicatorGroup.visible =
+    true;
+}
+
+// --------------------------------------------------
 // RESIZE
 // --------------------------------------------------
 
@@ -230,50 +396,75 @@ function animate() {
     puck.startShotCharge();
   }
 
-  if (controls.isShootHeld()) {
-    puck.updateShotCharge(delta);
+  // Recalculate aim every frame so the on-ice indicator and
+  // the released shot always use the exact same direction.
+  shotFacingDirection.copy(
+    puck.getPlayerForward(player)
+  );
 
-    controls.setShootChargeVisual(
-      puck.getShotCharge01()
-    );
-  }
+  shotAimDirection.copy(
+    shotFacingDirection
+  );
 
-  if (controls.consumeShootReleased()) {
-    shotFacingDirection.copy(
-      puck.getPlayerForward(player)
-    );
-
-    shotAimDirection.copy(
-      shotFacingDirection
-    );
-
-    // Blend facing with the current world-space joystick
-    // direction so skating direction influences shot aim.
-    if (
-      worldMovement &&
-      worldMovement.magnitude > 0.12
-    ) {
-      const movementAim = new THREE.Vector3(
+  if (
+    worldMovement &&
+    worldMovement.magnitude > 0.12
+  ) {
+    const movementAim =
+      new THREE.Vector3(
         worldMovement.x,
         0,
         worldMovement.z
       );
 
-      if (movementAim.lengthSq() > 0.0001) {
-        movementAim.normalize();
+    if (
+      movementAim.lengthSq() >
+      0.0001
+    ) {
+      movementAim.normalize();
 
-        shotAimDirection
-          .multiplyScalar(0.38)
-          .addScaledVector(movementAim, 0.62)
-          .normalize();
-      }
+      shotAimDirection
+        .multiplyScalar(0.38)
+        .addScaledVector(
+          movementAim,
+          0.62
+        )
+        .normalize();
     }
+  }
 
+  if (controls.isShootHeld()) {
+    puck.updateShotCharge(delta);
+
+    const shotCharge =
+      puck.getShotCharge01();
+
+    controls.setShootChargeVisual(
+      shotCharge
+    );
+
+    if (puck.isPossessed()) {
+      updateShotAimIndicator(
+        shotAimDirection,
+        shotCharge
+      );
+    } else {
+      aimIndicatorGroup.visible =
+        false;
+    }
+  } else {
+    aimIndicatorGroup.visible =
+      false;
+  }
+
+  if (controls.consumeShootReleased()) {
     puck.releaseChargedShot(
       shotAimDirection
     );
 
     controls.setShootChargeVisual(0);
+    aimIndicatorGroup.visible =
+      false;
   }
 
   if (
@@ -323,7 +514,7 @@ if (loadingScreen) {
   loadingScreen.classList.add("hidden");
 }
 
-console.log("ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
+console.log("ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
 console.log("Rink:", rink);
 console.log(
   "Camera:",
