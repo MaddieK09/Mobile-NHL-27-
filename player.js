@@ -50,6 +50,11 @@ export class HockeyPlayer {
 
     this.teamColor = options.teamColor ?? 0x1f5dbb;
 
+    // Stick / puck control state.
+    this.stickhandleTime = 0;
+    this.stickhandleAmount = 0;
+    this.puckControlPoint = new THREE.Object3D();
+
     this.group = new THREE.Group();
     this.group.name = "player";
 
@@ -383,27 +388,29 @@ export class HockeyPlayer {
         0.08
       );
 
-    const stickShaft =
+    this.stickShaft =
       new THREE.Mesh(
         shaftGeometry,
         stickMaterial
       );
 
-    stickShaft.position.set(
+    this.stickShaft.position.set(
       0.69,
       0.82,
       -0.15
     );
 
-    stickShaft.rotation.z =
+    this.stickShaft.rotation.z =
       -0.38;
 
-    stickShaft.rotation.x =
+    this.stickShaft.rotation.x =
       0.10;
 
-    stickShaft.castShadow = true;
+    this.stickShaft.castShadow = true;
 
-    this.group.add(stickShaft);
+    this.group.add(
+      this.stickShaft
+    );
 
     const bladeGeometry =
       new THREE.BoxGeometry(
@@ -412,24 +419,39 @@ export class HockeyPlayer {
         0.18
       );
 
-    const stickBlade =
+    this.stickBlade =
       new THREE.Mesh(
         bladeGeometry,
         stickMaterial
       );
 
-    stickBlade.position.set(
+    this.stickBlade.position.set(
       0.98,
       0.13,
       -0.19
     );
 
-    stickBlade.rotation.y =
+    this.stickBlade.rotation.y =
       -0.15;
 
-    stickBlade.castShadow = true;
+    this.stickBlade.castShadow = true;
 
-    this.group.add(stickBlade);
+    this.group.add(
+      this.stickBlade
+    );
+
+    // Invisible attachment point just ahead of the blade.
+    // puck.js can ask for this world position instead of
+    // guessing from the player's body center.
+    this.puckControlPoint.position.set(
+      0.24,
+      -0.055,
+      -0.02
+    );
+
+    this.stickBlade.add(
+      this.puckControlPoint
+    );
 
     // ------------------------------------------------
     // SHADOW / PLAYER MARKER
@@ -680,6 +702,50 @@ export class HockeyPlayer {
         this.rinkHalfWidth
       );
 
+    // Gentle stickhandling motion while skating.
+    // This is intentionally subtle until we add a right-stick
+    // skill-stick control later.
+    this.stickhandleTime +=
+      delta *
+      (1.8 + this.speed * 0.35);
+
+    const targetStickhandleAmount =
+      this.inputMagnitude > 0.05
+        ? 1
+        : 0.35;
+
+    this.stickhandleAmount =
+      THREE.MathUtils.lerp(
+        this.stickhandleAmount,
+        targetStickhandleAmount,
+        1 -
+          Math.exp(
+            -5 * delta
+          )
+      );
+
+    if (this.stickBlade) {
+      const sway =
+        Math.sin(
+          this.stickhandleTime
+        ) *
+        0.13 *
+        this.stickhandleAmount;
+
+      this.stickBlade.position.x =
+        0.98 + sway;
+
+      this.stickBlade.rotation.y =
+        -0.15 +
+        sway * 0.45;
+
+      if (this.stickShaft) {
+        this.stickShaft.rotation.z =
+          -0.38 -
+          sway * 0.12;
+      }
+    }
+
     this.group.position.copy(
       this.position
     );
@@ -694,6 +760,33 @@ export class HockeyPlayer {
 
   getPosition() {
     return this.position;
+  }
+
+  // ------------------------------------------------
+  // PUCK / STICK CONTROL POINT
+  // ------------------------------------------------
+
+  getPuckControlPoint(
+    target = new THREE.Vector3()
+  ) {
+    if (!this.puckControlPoint) {
+      return target.copy(
+        this.position
+      );
+    }
+
+    this.group.updateMatrixWorld(
+      true
+    );
+
+    return this.puckControlPoint
+      .getWorldPosition(
+        target
+      );
+  }
+
+  getStickBlade() {
+    return this.stickBlade;
   }
 
   // ------------------------------------------------
