@@ -91,6 +91,9 @@ export class HockeyPuck {
     this.carryTarget =
       new THREE.Vector3();
 
+    this.bladeWorldPosition =
+      new THREE.Vector3();
+
     this.mesh =
       this.createMesh();
 
@@ -291,45 +294,64 @@ export class HockeyPuck {
       return;
     }
 
-    const playerPosition =
-      player.getPosition
-        ? player.getPosition()
-        : player.position;
+    // Best path: follow the actual stick-blade attachment
+    // point exposed by player.js.
+    if (
+      typeof player.getPuckControlPoint ===
+      "function"
+    ) {
+      player.getPuckControlPoint(
+        this.bladeWorldPosition
+      );
 
-    if (!playerPosition) {
-      return;
+      this.carryTarget.copy(
+        this.bladeWorldPosition
+      );
+
+      this.carryTarget.y =
+        this.height / 2 +
+        0.012;
+    } else {
+      // Fallback for any player model that does not yet
+      // expose a blade attachment point.
+      const playerPosition =
+        player.getPosition
+          ? player.getPosition()
+          : player.position;
+
+      if (!playerPosition) {
+        return;
+      }
+
+      const forward =
+        this.getPlayerForward(
+          player
+        );
+
+      const right =
+        this.getPlayerRight(
+          player
+        );
+
+      this.carryTarget
+        .copy(playerPosition)
+        .addScaledVector(
+          forward,
+          this.carryForward
+        )
+        .addScaledVector(
+          right,
+          this.carryRight *
+            this.carrySide
+        );
+
+      this.carryTarget.y =
+        this.height / 2 +
+        0.012;
     }
 
-    const forward =
-      this.getPlayerForward(
-        player
-      );
-
-    const right =
-      this.getPlayerRight(
-        player
-      );
-
-    // Put the puck slightly ahead and to the stick side
-    // instead of beside / behind the skater.
-    this.carryTarget
-      .copy(playerPosition)
-      .addScaledVector(
-        forward,
-        this.carryForward
-      )
-      .addScaledVector(
-        right,
-        this.carryRight *
-          this.carrySide
-      );
-
-    this.carryTarget.y =
-      this.height / 2 +
-      0.012;
-
-    // Smoothly follow the blade target instead of visibly
-    // snapping to a fixed point on every frame.
+    // Smooth follow so the puck feels controlled by the blade
+    // without looking welded to a fixed body coordinate.
     const followAlpha =
       delta > 0
         ? 1 -
