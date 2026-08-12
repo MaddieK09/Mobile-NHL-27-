@@ -53,6 +53,9 @@ export class HockeyPlayer {
     // Stick / puck control state.
     this.stickhandleTime = 0;
     this.stickhandleAmount = 0;
+    this.stickhandleSway = 0;
+    this.turnRate = 0;
+    this.lastRotation = this.rotation;
     this.puckControlPoint = new THREE.Object3D();
 
     this.group = new THREE.Group();
@@ -646,6 +649,23 @@ export class HockeyPlayer {
           maxTurn
         );
 
+      // Track how sharply the player is turning so puck.js
+      // can let the puck lag instead of feeling welded on.
+      let frameRotationDelta =
+        this.rotation -
+        this.lastRotation;
+
+      frameRotationDelta =
+        Math.atan2(
+          Math.sin(frameRotationDelta),
+          Math.cos(frameRotationDelta)
+        );
+
+      this.turnRate =
+        delta > 0
+          ? frameRotationDelta / delta
+          : 0;
+
       // Skate in the requested direction.
       this.velocity.copy(
         this.moveDirection
@@ -655,6 +675,16 @@ export class HockeyPlayer {
         this.speed
       );
     } else {
+      this.turnRate =
+        THREE.MathUtils.lerp(
+          this.turnRate,
+          0,
+          1 -
+            Math.exp(
+              -8 * delta
+            )
+        );
+
       // Glide to a stop instead of stopping instantly.
       this.speed = Math.max(
         0,
@@ -702,17 +732,21 @@ export class HockeyPlayer {
         this.rinkHalfWidth
       );
 
-    // Gentle stickhandling motion while skating.
-    // This is intentionally subtle until we add a right-stick
-    // skill-stick control later.
+    // Automatic placeholder stickhandling.
+    // This is still not the future right-stick skill stick,
+    // but it gives the blade independent movement instead of
+    // moving as one rigid piece with the player.
     this.stickhandleTime +=
       delta *
-      (1.8 + this.speed * 0.35);
+      (
+        2.4 +
+        this.speed * 0.55
+      );
 
     const targetStickhandleAmount =
       this.inputMagnitude > 0.05
         ? 1
-        : 0.35;
+        : 0.45;
 
     this.stickhandleAmount =
       THREE.MathUtils.lerp(
@@ -720,31 +754,66 @@ export class HockeyPlayer {
         targetStickhandleAmount,
         1 -
           Math.exp(
-            -5 * delta
+            -6 * delta
           )
       );
 
-    if (this.stickBlade) {
-      const sway =
-        Math.sin(
-          this.stickhandleTime
-        ) *
-        0.13 *
-        this.stickhandleAmount;
+    const turnInfluence =
+      THREE.MathUtils.clamp(
+        this.turnRate / 3.2,
+        -1,
+        1
+      );
 
+    const sideToSide =
+      Math.sin(
+        this.stickhandleTime
+      ) *
+      0.19 *
+      this.stickhandleAmount;
+
+    const forwardBack =
+      Math.cos(
+        this.stickhandleTime * 0.82
+      ) *
+      0.055 *
+      this.stickhandleAmount;
+
+    this.stickhandleSway =
+      sideToSide;
+
+    if (this.stickBlade) {
       this.stickBlade.position.x =
-        0.98 + sway;
+        0.98 +
+        sideToSide +
+        turnInfluence * 0.08;
+
+      this.stickBlade.position.z =
+        -0.19 +
+        forwardBack;
 
       this.stickBlade.rotation.y =
         -0.15 +
-        sway * 0.45;
+        sideToSide * 0.62 +
+        turnInfluence * 0.18;
+
+      this.stickBlade.rotation.z =
+        -turnInfluence * 0.06;
 
       if (this.stickShaft) {
         this.stickShaft.rotation.z =
           -0.38 -
-          sway * 0.12;
+          sideToSide * 0.15 -
+          turnInfluence * 0.055;
+
+        this.stickShaft.rotation.x =
+          0.10 +
+          forwardBack * 0.35;
       }
     }
+
+    this.lastRotation =
+      this.rotation;
 
     this.group.position.copy(
       this.position
@@ -787,6 +856,14 @@ export class HockeyPlayer {
 
   getStickBlade() {
     return this.stickBlade;
+  }
+
+  getTurnRate() {
+    return this.turnRate;
+  }
+
+  getStickhandleSway() {
+    return this.stickhandleSway;
   }
 
   // ------------------------------------------------
