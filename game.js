@@ -176,6 +176,44 @@ scene.add(
   aimIndicatorGroup
 );
 
+// Giant debug arrow: intentionally impossible to miss.
+// Once we prove this renders on-device, we'll replace it
+// with the subtle on-ice guide.
+const debugAimArrow =
+  new THREE.ArrowHelper(
+    new THREE.Vector3(0, 0, -1),
+    new THREE.Vector3(0, 2.5, 0),
+    7,
+    0xff00ff,
+    1.8,
+    0.9
+  );
+
+debugAimArrow.visible =
+  false;
+
+debugAimArrow.line.material.depthTest =
+  false;
+
+debugAimArrow.line.material.depthWrite =
+  false;
+
+debugAimArrow.cone.material.depthTest =
+  false;
+
+debugAimArrow.cone.material.depthWrite =
+  false;
+
+debugAimArrow.line.renderOrder =
+  1000;
+
+debugAimArrow.cone.renderOrder =
+  1001;
+
+scene.add(
+  debugAimArrow
+);
+
 const aimLineMaterial =
   new THREE.MeshBasicMaterial({
     color: 0x32d8ff,
@@ -392,6 +430,65 @@ function updateShotAimIndicator(
     true;
 }
 
+function updateDebugAimArrow(
+  direction,
+  charge
+) {
+  if (
+    !direction ||
+    direction.lengthSq() <
+      0.0001
+  ) {
+    debugAimArrow.visible =
+      false;
+
+    return;
+  }
+
+  const puckPosition =
+    puck.getPosition();
+
+  const debugDirection =
+    direction.clone();
+
+  debugDirection.y = 0;
+
+  if (
+    debugDirection.lengthSq() <
+      0.0001
+  ) {
+    debugAimArrow.visible =
+      false;
+
+    return;
+  }
+
+  debugDirection.normalize();
+
+  debugAimArrow.position.set(
+    puckPosition.x,
+    2.5,
+    puckPosition.z
+  );
+
+  debugAimArrow.setDirection(
+    debugDirection
+  );
+
+  debugAimArrow.setLength(
+    THREE.MathUtils.lerp(
+      5,
+      10,
+      charge
+    ),
+    1.8,
+    0.9
+  );
+
+  debugAimArrow.visible =
+    true;
+}
+
 // --------------------------------------------------
 // RESIZE
 // --------------------------------------------------
@@ -512,12 +609,23 @@ function animate() {
         shotAimDirection,
         shotCharge
       );
+
+      updateDebugAimArrow(
+        shotAimDirection,
+        shotCharge
+      );
     } else {
       aimIndicatorGroup.visible =
+        false;
+
+      debugAimArrow.visible =
         false;
     }
   } else {
     aimIndicatorGroup.visible =
+      false;
+
+    debugAimArrow.visible =
       false;
   }
 
@@ -527,7 +635,11 @@ function animate() {
     );
 
     controls.setShootChargeVisual(0);
+
     aimIndicatorGroup.visible =
+      false;
+
+    debugAimArrow.visible =
       false;
   }
 
@@ -578,7 +690,7 @@ if (loadingScreen) {
   loadingScreen.classList.add("hidden");
 }
 
-console.log("ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
+console.log("ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
 console.log("Rink:", rink);
 console.log(
   "Camera:",
