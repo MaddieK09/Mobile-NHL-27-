@@ -222,12 +222,32 @@ function animate() {
   // HOCKEY ACTIONS
   // ------------------------------------------------
 
+  // Hold SHOOT to charge, release to fire.
   if (
-    controls.consumeAction(
-      "shoot"
-    )
+    controls.consumeShootPressed()
   ) {
-    puck.shoot(20);
+    puck.startShotCharge();
+  }
+
+  if (
+    controls.isShootHeld()
+  ) {
+    puck.updateShotCharge(
+      delta
+    );
+  }
+
+  if (
+    controls.consumeShootReleased()
+  ) {
+    const shotDirection =
+      puck.getPlayerForward(
+        player
+      );
+
+    puck.releaseChargedShot(
+      shotDirection
+    );
   }
 
   if (
@@ -270,7 +290,7 @@ if (loadingScreen) {
   loadingScreen.classList.add("hidden");
 }
 
-console.log("ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
+console.log("ÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
 console.log("Rink:", rink);
 console.log(
   "Camera:",
