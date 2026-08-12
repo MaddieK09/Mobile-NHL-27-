@@ -169,50 +169,79 @@ const puck = new HockeyPuck(
 const aimIndicatorGroup =
   new THREE.Group();
 
+aimIndicatorGroup.visible =
+  false;
+
+scene.add(
+  aimIndicatorGroup
+);
+
 const aimLineMaterial =
-  new THREE.LineBasicMaterial({
-    color: 0xffffff,
+  new THREE.MeshBasicMaterial({
+    color: 0x32d8ff,
     transparent: true,
-    opacity: 0.72,
-    depthTest: false
+    opacity: 0.86,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide
   });
-
-const aimLineGeometry =
-  new THREE.BufferGeometry();
-
-const aimLine =
-  new THREE.Line(
-    aimLineGeometry,
-    aimLineMaterial
-  );
-
-aimLine.renderOrder = 50;
-
-const aimTipGeometry =
-  new THREE.ConeGeometry(
-    0.18,
-    0.46,
-    18
-  );
 
 const aimTipMaterial =
   new THREE.MeshBasicMaterial({
     color: 0xffffff,
     transparent: true,
-    opacity: 0.82,
-    depthTest: false
+    opacity: 0.95,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide
   });
+
+const aimLine =
+  new THREE.Mesh(
+    new THREE.PlaneGeometry(
+      1,
+      0.16
+    ),
+    aimLineMaterial
+  );
+
+aimLine.rotation.x =
+  -Math.PI / 2;
+
+aimLine.renderOrder = 500;
+
+const aimTipShape =
+  new THREE.Shape();
+
+aimTipShape.moveTo(
+  0.34,
+  0
+);
+
+aimTipShape.lineTo(
+  -0.18,
+  0.22
+);
+
+aimTipShape.lineTo(
+  -0.18,
+  -0.22
+);
+
+aimTipShape.closePath();
 
 const aimTip =
   new THREE.Mesh(
-    aimTipGeometry,
+    new THREE.ShapeGeometry(
+      aimTipShape
+    ),
     aimTipMaterial
   );
 
 aimTip.rotation.x =
-  Math.PI / 2;
+  -Math.PI / 2;
 
-aimTip.renderOrder = 51;
+aimTip.renderOrder = 501;
 
 aimIndicatorGroup.add(
   aimLine
@@ -220,13 +249,6 @@ aimIndicatorGroup.add(
 
 aimIndicatorGroup.add(
   aimTip
-);
-
-aimIndicatorGroup.visible =
-  false;
-
-scene.add(
-  aimIndicatorGroup
 );
 
 const aimStart =
@@ -257,12 +279,23 @@ function updateShotAimIndicator(
     direction.clone();
 
   normalizedDirection.y = 0;
+
+  if (
+    normalizedDirection.lengthSq() <
+    0.0001
+  ) {
+    aimIndicatorGroup.visible =
+      false;
+
+    return;
+  }
+
   normalizedDirection.normalize();
 
   const length =
     THREE.MathUtils.lerp(
-      2.2,
-      6.5,
+      2.8,
+      7.4,
       THREE.MathUtils.clamp(
         charge,
         0,
@@ -272,7 +305,7 @@ function updateShotAimIndicator(
 
   aimStart.set(
     puckPosition.x,
-    0.035,
+    0.12,
     puckPosition.z
   );
 
@@ -285,33 +318,56 @@ function updateShotAimIndicator(
       length
     );
 
-  aimLine.geometry.setFromPoints([
-    aimStart,
-    aimEnd
-  ]);
+  const centerX =
+    (aimStart.x +
+      aimEnd.x) /
+    2;
 
-  aimTip.position.copy(
-    aimEnd
-  );
+  const centerZ =
+    (aimStart.z +
+      aimEnd.z) /
+    2;
 
-  // Cone's local +Y axis is the arrow direction before
-  // the X rotation above, so orient the group on the ice.
   const angle =
     Math.atan2(
-      normalizedDirection.x,
-      normalizedDirection.z
+      normalizedDirection.z,
+      normalizedDirection.x
     );
 
-  aimTip.rotation.set(
-    Math.PI / 2,
+  aimLine.position.set(
+    centerX,
+    0.12,
+    centerZ
+  );
+
+  aimLine.scale.set(
+    length,
+    1,
+    1
+  );
+
+  aimLine.rotation.set(
+    -Math.PI / 2,
     0,
-    -angle
+    angle
+  );
+
+  aimTip.position.set(
+    aimEnd.x,
+    0.125,
+    aimEnd.z
+  );
+
+  aimTip.rotation.set(
+    -Math.PI / 2,
+    0,
+    angle
   );
 
   const opacity =
     THREE.MathUtils.lerp(
-      0.45,
-      0.95,
+      0.65,
+      1,
       charge
     );
 
@@ -321,7 +377,15 @@ function updateShotAimIndicator(
   aimTipMaterial.opacity =
     Math.min(
       1,
-      opacity + 0.08
+      opacity + 0.05
+    );
+
+  // Slightly widen the guide as charge builds.
+  aimLine.scale.y =
+    THREE.MathUtils.lerp(
+      1,
+      1.75,
+      charge
     );
 
   aimIndicatorGroup.visible =
@@ -514,7 +578,7 @@ if (loadingScreen) {
   loadingScreen.classList.add("hidden");
 }
 
-console.log("ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
+console.log("ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
 console.log("Rink:", rink);
 console.log(
   "Camera:",
