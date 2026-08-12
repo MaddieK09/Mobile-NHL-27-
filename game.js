@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createRink } from "./rink.js";
-
+import { HockeyPlayer } from "./player.js";
 // ==================================================
 // MOBILE NHL 27 - MAIN GAME
 // ==================================================
@@ -119,7 +119,13 @@ scene.add(arenaFloor);
 // --------------------------------------------------
 
 const rink = createRink(scene);
-
+// PLAYER
+const player = new HockeyPlayer(scene, {
+  x: 0,
+  z: 6,
+  rotation: Math.PI,
+  teamColor: 0x1f5dbb
+});
 // --------------------------------------------------
 // TEMPORARY PUCK
 // --------------------------------------------------
@@ -189,7 +195,7 @@ function animate() {
     clock.getDelta(),
     0.05
   );
-
+player.update(delta);
   // Temporary visual proof that the loop is alive.
   puck.rotation.y += delta * 0.5;
 
