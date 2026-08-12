@@ -218,11 +218,17 @@ function animate() {
     clock.getDelta(),
     0.05
   );
-  const movement = controls.getMovement();
+  const movement =
+    controls.getMovement();
+
+  const worldMovement =
+    cameraManager.getWorldMovement(
+      movement
+    );
 
   player.update(
     delta,
-    movement
+    worldMovement
   );
 
   cameraManager.update(delta);
