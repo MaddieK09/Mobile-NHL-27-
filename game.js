@@ -196,6 +196,9 @@ window.addEventListener(
 
 const clock = new THREE.Clock();
 
+const shotAimDirection = new THREE.Vector3();
+const shotFacingDirection = new THREE.Vector3();
+
 function animate() {
   requestAnimationFrame(animate);
 
@@ -223,31 +226,61 @@ function animate() {
   // ------------------------------------------------
 
   // Hold SHOOT to charge, release to fire.
-  if (
-    controls.consumeShootPressed()
-  ) {
+  if (controls.consumeShootPressed()) {
     puck.startShotCharge();
   }
 
-  if (
-    controls.isShootHeld()
-  ) {
-    puck.updateShotCharge(
-      delta
+  if (controls.isShootHeld()) {
+    puck.updateShotCharge(delta);
+
+    controls.setShootChargeVisual(
+      puck.getShotCharge01()
     );
   }
 
-  if (
-    controls.consumeShootReleased()
-  ) {
-    const shotDirection =
-      puck.getPlayerForward(
-        player
+  if (controls.consumeShootReleased()) {
+    shotFacingDirection.copy(
+      puck.getPlayerForward(player)
+    );
+
+    shotAimDirection.copy(
+      shotFacingDirection
+    );
+
+    // Blend facing with the current world-space joystick
+    // direction so skating direction influences shot aim.
+    if (
+      worldMovement &&
+      worldMovement.magnitude > 0.12
+    ) {
+      const movementAim = new THREE.Vector3(
+        worldMovement.x,
+        0,
+        worldMovement.z
       );
 
+      if (movementAim.lengthSq() > 0.0001) {
+        movementAim.normalize();
+
+        shotAimDirection
+          .multiplyScalar(0.38)
+          .addScaledVector(movementAim, 0.62)
+          .normalize();
+      }
+    }
+
     puck.releaseChargedShot(
-      shotDirection
+      shotAimDirection
     );
+
+    controls.setShootChargeVisual(0);
+  }
+
+  if (
+    !controls.isShootHeld() &&
+    !puck.isChargingShot
+  ) {
+    controls.setShootChargeVisual(0);
   }
 
   if (
@@ -290,7 +323,7 @@ if (loadingScreen) {
   loadingScreen.classList.add("hidden");
 }
 
-console.log("ÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
+console.log("ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
 console.log("Rink:", rink);
 console.log(
   "Camera:",
