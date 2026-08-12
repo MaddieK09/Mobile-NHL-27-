@@ -80,16 +80,16 @@ export class HockeyPuck {
       options.pickupCooldown ?? 0;
 
     this.repickupDelay =
-      options.repickupDelay ?? 0.28;
+      options.repickupDelay ?? 0.20;
 
     this.controlBreakDistance =
-      options.controlBreakDistance ?? 0.82;
+      options.controlBreakDistance ?? 1.10;
 
     this.controlBreakTurnRate =
-      options.controlBreakTurnRate ?? 2.65;
+      options.controlBreakTurnRate ?? 3.05;
 
     this.controlBreakMinSpeed =
-      options.controlBreakMinSpeed ?? 5.4;
+      options.controlBreakMinSpeed ?? 6.25;
 
     this.possessedBy = null;
 
@@ -540,7 +540,7 @@ export class HockeyPuck {
         -turnAmount *
           speed *
           delta *
-          0.22
+          0.16
       );
 
     this.carryTarget.add(
