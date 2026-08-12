@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { createRink } from "./rink.js";
 import { HockeyPlayer } from "./player.js";
+import { Controls } from "./controls.js";
 // ==================================================
 // MOBILE NHL 27 - MAIN GAME
 // ==================================================
@@ -126,6 +127,12 @@ const player = new HockeyPlayer(scene, {
   rotation: Math.PI,
   teamColor: 0x1f5dbb
 });
+
+// --------------------------------------------------
+// CONTROLS
+// --------------------------------------------------
+
+const controls = new Controls();
 // --------------------------------------------------
 // TEMPORARY PUCK
 // --------------------------------------------------
@@ -195,7 +202,12 @@ function animate() {
     clock.getDelta(),
     0.05
   );
-player.update(delta);
+  const movement = controls.getMovement();
+
+  player.update(
+    delta,
+    movement
+  );
   // Temporary visual proof that the loop is alive.
   puck.rotation.y += delta * 0.5;
 
@@ -216,5 +228,5 @@ if (loadingScreen) {
   loadingScreen.classList.add("hidden");
 }
 
-console.log("🏒 Mobile NHL 27 started.");
+console.log("ð Mobile NHL 27 started.");
 console.log("Rink:", rink);
