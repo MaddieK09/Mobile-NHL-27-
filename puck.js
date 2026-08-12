@@ -29,11 +29,13 @@ export class HockeyPuck {
   constructor(scene, options = {}) {
     this.scene = scene;
 
+    // Regulation puck scale for this rink:
+    // 3 in diameter x 1 in thick.
     this.radius =
-      options.radius ?? 0.38;
+      options.radius ?? 0.0375;
 
     this.height =
-      options.height ?? 0.16;
+      options.height ?? 0.025;
 
     this.position =
       new THREE.Vector3(
@@ -52,16 +54,26 @@ export class HockeyPuck {
       options.maxFreeSpeed ?? 28;
 
     this.pickupRadius =
-      options.pickupRadius ?? 1.8;
+      options.pickupRadius ?? 1.35;
 
     this.possessedBy = null;
 
-    this.carryOffset =
-      new THREE.Vector3(
-        0.95,
-        this.height / 2,
-        -0.28
-      );
+    // Temporary stick-blade target until the player model
+    // gets an actual animated stick / blade attachment point.
+    this.carrySide =
+      options.carrySide ?? 1;
+
+    this.carryForward =
+      options.carryForward ?? 0.72;
+
+    this.carryRight =
+      options.carryRight ?? 0.52;
+
+    this.carryFollowSpeed =
+      options.carryFollowSpeed ?? 18;
+
+    this.carryTarget =
+      new THREE.Vector3();
 
     this.mesh =
       this.createMesh();
@@ -85,7 +97,9 @@ export class HockeyPuck {
         this.radius,
         this.radius,
         this.height,
-        32
+        40,
+        1,
+        false
       );
 
     const material =
@@ -207,7 +221,7 @@ export class HockeyPuck {
   // CARRY
   // ------------------------------------------------
 
-  updateCarriedPosition() {
+  updateCarriedPosition(delta = 0) {
     const player =
       this.possessedBy;
 
@@ -234,20 +248,39 @@ export class HockeyPuck {
         player
       );
 
-    this.position
+    // Put the puck slightly ahead and to the stick side
+    // instead of beside / behind the skater.
+    this.carryTarget
       .copy(playerPosition)
       .addScaledVector(
-        right,
-        this.carryOffset.x
+        forward,
+        this.carryForward
       )
       .addScaledVector(
-        forward,
-        this.carryOffset.z
+        right,
+        this.carryRight *
+          this.carrySide
       );
 
-    this.position.y =
+    this.carryTarget.y =
       this.height / 2 +
-      0.02;
+      0.012;
+
+    // Smoothly follow the blade target instead of visibly
+    // snapping to a fixed point on every frame.
+    const followAlpha =
+      delta > 0
+        ? 1 -
+          Math.exp(
+            -this.carryFollowSpeed *
+            delta
+          )
+        : 1;
+
+    this.position.lerp(
+      this.carryTarget,
+      followAlpha
+    );
 
     this.velocity.set(
       0,
@@ -413,7 +446,9 @@ export class HockeyPuck {
     if (
       this.isPossessed()
     ) {
-      this.updateCarriedPosition();
+      this.updateCarriedPosition(
+        delta
+      );
     } else {
       this.updateFreePuck(
         delta
