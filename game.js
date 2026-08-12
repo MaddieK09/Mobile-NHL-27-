@@ -3,6 +3,7 @@ import { createRink } from "./rink.js";
 import { HockeyPlayer } from "./player.js";
 import { Controls } from "./controls.js";
 import { CameraManager, CAMERA_MODES } from "./camera.js";
+import { HockeyPuck } from "./puck.js";
 // ==================================================
 // MOBILE NHL 27 - MAIN GAME
 // ==================================================
@@ -150,32 +151,16 @@ const cameraManager = new CameraManager(
 // Snap immediately to the closer landscape follow camera.
 cameraManager.update(0);
 // --------------------------------------------------
-// TEMPORARY PUCK
+// PUCK
 // --------------------------------------------------
-//
-// puck.js will replace this shortly.
 
-const puckGeometry = new THREE.CylinderGeometry(
-  0.38,
-  0.38,
-  0.16,
-  32
+const puck = new HockeyPuck(
+  scene,
+  {
+    x: 0,
+    z: 0
+  }
 );
-
-const puckMaterial = new THREE.MeshStandardMaterial({
-  color: 0x080808,
-  roughness: 0.75
-});
-
-const puck = new THREE.Mesh(
-  puckGeometry,
-  puckMaterial
-);
-
-puck.position.set(0, 0.12, 0);
-puck.castShadow = true;
-
-scene.add(puck);
 
 // --------------------------------------------------
 // RESIZE
@@ -233,8 +218,10 @@ function animate() {
 
   cameraManager.update(delta);
 
-  // Temporary visual proof that the loop is alive.
-  puck.rotation.y += delta * 0.5;
+  puck.update(
+    delta,
+    player
+  );
 
   renderer.render(
     scene,
@@ -253,9 +240,12 @@ if (loadingScreen) {
   loadingScreen.classList.add("hidden");
 }
 
-console.log("Ã°ÂÂÂ Mobile NHL 27 started.");
+console.log("ÃÂ°ÃÂÃÂÃÂ Mobile NHL 27 started.");
 console.log("Rink:", rink);
 console.log(
   "Camera:",
   cameraManager.getModeLabel()
+);
+console.log(
+  "Puck system ready."
 );
