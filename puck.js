@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RINK } from "./rink.js";
 
 // ==================================================
 // MOBILE NHL 27 - PUCK
@@ -37,8 +38,6 @@ export class HockeyPuck {
     this.height =
       options.height ?? 0.025;
 
-    // Keep gameplay/physics dimensions realistic, but make
-    // the rendered puck easier to track on a phone screen.
     this.visualScale =
       options.visualScale ?? 1.75;
 
@@ -60,6 +59,15 @@ export class HockeyPuck {
 
     this.maxFreeSpeed =
       options.maxFreeSpeed ?? 28;
+
+    this.boardRestitution =
+      options.boardRestitution ?? 0.68;
+
+    this.boardTangentialDrag =
+      options.boardTangentialDrag ?? 0.94;
+
+    this.boardInset =
+      options.boardInset ?? 0.10;
 
     this.pickupRadius =
       options.pickupRadius ?? 1.35;
@@ -436,6 +444,231 @@ export class HockeyPuck {
   }
 
   // ------------------------------------------------
+  // RINK / BOARD COLLISION
+  // ------------------------------------------------
+
+  getPlayableHalfWidthAtX(x) {
+    const halfLength =
+      RINK.length / 2;
+
+    const halfWidth =
+      RINK.width / 2;
+
+    const radius =
+      RINK.cornerRadius;
+
+    const straightEnd =
+      halfLength - radius;
+
+    const absX =
+      Math.abs(x);
+
+    if (absX <= straightEnd) {
+      return halfWidth;
+    }
+
+    const dx =
+      absX - straightEnd;
+
+    const inside =
+      Math.max(
+        0,
+        radius * radius -
+          dx * dx
+      );
+
+    return (
+      halfWidth -
+      radius +
+      Math.sqrt(inside)
+    );
+  }
+
+  resolveBoardCollision() {
+    const halfLength =
+      RINK.length / 2;
+
+    const halfWidth =
+      RINK.width / 2;
+
+    const cornerRadius =
+      RINK.cornerRadius;
+
+    const puckRadius =
+      this.radius;
+
+    const inset =
+      this.boardInset +
+      puckRadius;
+
+    const straightEnd =
+      halfLength -
+      cornerRadius;
+
+    const absX =
+      Math.abs(
+        this.position.x
+      );
+
+    const absZ =
+      Math.abs(
+        this.position.z
+      );
+
+    // ----------------------------------------------
+    // STRAIGHT SIDE BOARDS
+    // ----------------------------------------------
+
+    if (
+      absX <= straightEnd
+    ) {
+      const maxZ =
+        halfWidth - inset;
+
+      if (
+        absZ > maxZ
+      ) {
+        const signZ =
+          Math.sign(
+            this.position.z
+          ) || 1;
+
+        this.position.z =
+          signZ *
+          maxZ;
+
+        this.velocity.z *=
+          -this.boardRestitution;
+
+        this.velocity.x *=
+          this.boardTangentialDrag;
+      }
+
+      return;
+    }
+
+    // ----------------------------------------------
+    // STRAIGHT END BOARDS
+    // ----------------------------------------------
+
+    const verticalStraightLimit =
+      halfWidth -
+      cornerRadius;
+
+    if (
+      absZ <=
+      verticalStraightLimit
+    ) {
+      const maxX =
+        halfLength - inset;
+
+      if (
+        absX > maxX
+      ) {
+        const signX =
+          Math.sign(
+            this.position.x
+          ) || 1;
+
+        this.position.x =
+          signX *
+          maxX;
+
+        this.velocity.x *=
+          -this.boardRestitution;
+
+        this.velocity.z *=
+          this.boardTangentialDrag;
+      }
+
+      return;
+    }
+
+    // ----------------------------------------------
+    // ROUNDED CORNERS
+    // ----------------------------------------------
+
+    const centerX =
+      Math.sign(
+        this.position.x
+      ) *
+      straightEnd;
+
+    const centerZ =
+      Math.sign(
+        this.position.z
+      ) *
+      verticalStraightLimit;
+
+    const dx =
+      this.position.x -
+      centerX;
+
+    const dz =
+      this.position.z -
+      centerZ;
+
+    const distance =
+      Math.sqrt(
+        dx * dx +
+        dz * dz
+      );
+
+    const maxRadius =
+      cornerRadius - inset;
+
+    if (
+      distance >
+      maxRadius &&
+      distance >
+      0.0001
+    ) {
+      const normalX =
+        dx / distance;
+
+      const normalZ =
+        dz / distance;
+
+      // Push puck back onto playable ice.
+      this.position.x =
+        centerX +
+        normalX *
+        maxRadius;
+
+      this.position.z =
+        centerZ +
+        normalZ *
+        maxRadius;
+
+      // Reflect velocity off the curved board.
+      const dot =
+        this.velocity.x *
+          normalX +
+        this.velocity.z *
+          normalZ;
+
+      if (dot > 0) {
+        this.velocity.x -=
+          (1 + this.boardRestitution) *
+          dot *
+          normalX;
+
+        this.velocity.z -=
+          (1 + this.boardRestitution) *
+          dot *
+          normalZ;
+      }
+
+      // Lose a little energy along the wall.
+      this.velocity.x *=
+        this.boardTangentialDrag;
+
+      this.velocity.z *=
+        this.boardTangentialDrag;
+    }
+  }
+
+  // ------------------------------------------------
   // FREE PUCK PHYSICS
   // ------------------------------------------------
 
@@ -488,6 +721,8 @@ export class HockeyPuck {
       delta
     );
 
+    this.resolveBoardCollision();
+
     this.position.y =
       this.height / 2;
   }
@@ -530,9 +765,6 @@ export class HockeyPuck {
       this.position.z
     );
 
-    // The subtle locator is most useful when the puck is
-    // loose. Hide it during possession so stick carrying
-    // still looks clean.
     this.indicator.visible =
       !this.isPossessed();
 
