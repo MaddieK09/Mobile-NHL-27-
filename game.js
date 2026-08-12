@@ -218,6 +218,36 @@ function animate() {
 
   cameraManager.update(delta);
 
+  // ------------------------------------------------
+  // HOCKEY ACTIONS
+  // ------------------------------------------------
+
+  if (
+    controls.consumeAction(
+      "shoot"
+    )
+  ) {
+    puck.shoot(20);
+  }
+
+  if (
+    controls.consumeAction(
+      "pass"
+    )
+  ) {
+    // For now, pass in the direction the skater is
+    // facing. Later this will use teammates / aiming.
+    const passDirection =
+      puck.getPlayerForward(
+        player
+      );
+
+    puck.pass(
+      passDirection,
+      12
+    );
+  }
+
   puck.update(
     delta,
     player
@@ -240,7 +270,7 @@ if (loadingScreen) {
   loadingScreen.classList.add("hidden");
 }
 
-console.log("ÃÂ°ÃÂÃÂÃÂ Mobile NHL 27 started.");
+console.log("ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Mobile NHL 27 started.");
 console.log("Rink:", rink);
 console.log(
   "Camera:",
