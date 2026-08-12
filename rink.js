@@ -4,123 +4,135 @@ import * as THREE from "three";
 // MOBILE NHL 27 - RINK
 // ==================================================
 //
+// Regulation-oriented NHL rink geometry.
+//
+// Coordinate system:
+//   X = length of rink
+//   Z = width of rink
+//   Y = height
+//
 // Internal scale:
-// 1 real foot = 0.30 Three.js units
-//
-// NHL rink:
-// 200 ft long
-// 85 ft wide
-// 28 ft corner radius
-//
-// That becomes:
-// 60 x 25.5 game units
+//   1 real foot = 0.30 Three.js units
 // ==================================================
 
-const SCALE = 0.30;
+export const SCALE = 0.30;
+
+const FT = (feet) => feet * SCALE;
+const IN = (inches) => (inches / 12) * SCALE;
 
 export const RINK = {
-  length: 200 * SCALE,
-  width: 85 * SCALE,
-  cornerRadius: 28 * SCALE,
+  length: FT(200),
+  width: FT(85),
+  cornerRadius: FT(28),
 
-  boardHeight: 3.5 * SCALE,
-  boardThickness: 1.0 * SCALE,
+  halfLength: FT(100),
+  halfWidth: FT(42.5),
 
-  glassHeight: 6 * SCALE,
+  boardHeight: FT(3.5),
+  boardThickness: FT(1),
 
-  goalLineX: 89 * SCALE,
-  blueLineX: 25 * SCALE,
+  glassHeightSide: FT(5),
+  glassHeightEnd: FT(8),
 
-  faceoffRadius: 15 * SCALE,
+  goalLineX: FT(89),
+  blueLineX: FT(25),
 
-  creaseRadius: 6 * SCALE
+  centerLineWidth: FT(1),
+  blueLineWidth: FT(1),
+  thinLineWidth: IN(2),
+
+  faceoffRadius: FT(15),
+
+  goalWidth: FT(6),
+  goalHeight: FT(4),
+
+  creaseRadius: FT(6),
+  creaseHalfWidth: FT(4),
+  creaseStraightDepth: FT(4.5)
 };
 
-// --------------------------------------------------
+// ==================================================
 // MATERIALS
-// --------------------------------------------------
+// ==================================================
 
-const iceMaterial =
-  new THREE.MeshStandardMaterial({
-    color: 0xf1fbff,
-    roughness: 0.20,
-    metalness: 0.02
-  });
+const iceMaterial = new THREE.MeshStandardMaterial({
+  color: 0xf4fcff,
+  roughness: 0.18,
+  metalness: 0.015
+});
 
-const boardMaterial =
-  new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.48
-  });
+const boardMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  roughness: 0.5
+});
 
-const yellowKickplateMaterial =
-  new THREE.MeshStandardMaterial({
-    color: 0xf3c623,
-    roughness: 0.55
-  });
+const kickplateMaterial = new THREE.MeshStandardMaterial({
+  color: 0xf2c500,
+  roughness: 0.55
+});
 
-const glassMaterial =
-  new THREE.MeshPhysicalMaterial({
-    color: 0xcfeeff,
-    transparent: true,
-    opacity: 0.18,
-    roughness: 0.05,
-    metalness: 0,
-    transmission: 0.35,
-    depthWrite: false,
-    side: THREE.DoubleSide
-  });
+const glassMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xd9f3ff,
+  transparent: true,
+  opacity: 0.17,
+  roughness: 0.04,
+  metalness: 0,
+  transmission: 0.35,
+  depthWrite: false,
+  side: THREE.DoubleSide
+});
 
-const redMaterial =
-  new THREE.MeshBasicMaterial({
-    color: 0xc92032,
-    side: THREE.DoubleSide
-  });
+const redMaterial = new THREE.MeshBasicMaterial({
+  color: 0xc91932,
+  side: THREE.DoubleSide
+});
 
-const blueMaterial =
-  new THREE.MeshBasicMaterial({
-    color: 0x1763bd,
-    side: THREE.DoubleSide
-  });
+const blueMaterial = new THREE.MeshBasicMaterial({
+  color: 0x1658ad,
+  side: THREE.DoubleSide
+});
 
-const creaseMaterial =
-  new THREE.MeshBasicMaterial({
-    color: 0x9ed8f5,
-    transparent: true,
-    opacity: 0.65,
-    side: THREE.DoubleSide
-  });
+const creaseFillMaterial = new THREE.MeshBasicMaterial({
+  color: 0x8fd5f3,
+  transparent: true,
+  opacity: 0.72,
+  side: THREE.DoubleSide
+});
 
-// --------------------------------------------------
-// ROUNDED RINK SHAPE
-// --------------------------------------------------
+const whiteMaterial = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  side: THREE.DoubleSide
+});
+
+const postMaterial = new THREE.MeshStandardMaterial({
+  color: 0xd71920,
+  roughness: 0.36
+});
+
+const netMaterial = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  wireframe: true,
+  transparent: true,
+  opacity: 0.42
+});
+
+// ==================================================
+// RINK SHAPE
+// ==================================================
 
 function createRinkShape() {
-  const halfLength =
-    RINK.length / 2;
+  const halfL = RINK.halfLength;
+  const halfW = RINK.halfWidth;
+  const r = RINK.cornerRadius;
 
-  const halfWidth =
-    RINK.width / 2;
+  const shape = new THREE.Shape();
 
-  const r =
-    RINK.cornerRadius;
-
-  const shape =
-    new THREE.Shape();
-
-  shape.moveTo(
-    -halfLength + r,
-    -halfWidth
-  );
-
-  shape.lineTo(
-    halfLength - r,
-    -halfWidth
-  );
+  shape.moveTo(-halfL + r, -halfW);
+  shape.lineTo(halfL - r, -halfW);
 
   shape.absarc(
-    halfLength - r,
-    -halfWidth + r,
+    halfL - r,
+    -halfW + r,
     r,
     -Math.PI / 2,
     0,
@@ -128,13 +140,13 @@ function createRinkShape() {
   );
 
   shape.lineTo(
-    halfLength,
-    halfWidth - r
+    halfL,
+    halfW - r
   );
 
   shape.absarc(
-    halfLength - r,
-    halfWidth - r,
+    halfL - r,
+    halfW - r,
     r,
     0,
     Math.PI / 2,
@@ -142,13 +154,13 @@ function createRinkShape() {
   );
 
   shape.lineTo(
-    -halfLength + r,
-    halfWidth
+    -halfL + r,
+    halfW
   );
 
   shape.absarc(
-    -halfLength + r,
-    halfWidth - r,
+    -halfL + r,
+    halfW - r,
     r,
     Math.PI / 2,
     Math.PI,
@@ -156,13 +168,13 @@ function createRinkShape() {
   );
 
   shape.lineTo(
-    -halfLength,
-    -halfWidth + r
+    -halfL,
+    -halfW + r
   );
 
   shape.absarc(
-    -halfLength + r,
-    -halfWidth + r,
+    -halfL + r,
+    -halfW + r,
     r,
     Math.PI,
     Math.PI * 1.5,
@@ -174,15 +186,50 @@ function createRinkShape() {
   return shape;
 }
 
-// --------------------------------------------------
+function rinkHalfWidthAtX(x) {
+  const ax = Math.abs(x);
+  const straightEnd =
+    RINK.halfLength -
+    RINK.cornerRadius;
+
+  if (ax <= straightEnd) {
+    return RINK.halfWidth;
+  }
+
+  const dx =
+    ax -
+    straightEnd;
+
+  if (dx >= RINK.cornerRadius) {
+    return (
+      RINK.halfWidth -
+      RINK.cornerRadius
+    );
+  }
+
+  return (
+    RINK.halfWidth -
+    RINK.cornerRadius +
+    Math.sqrt(
+      Math.max(
+        0,
+        RINK.cornerRadius *
+          RINK.cornerRadius -
+          dx * dx
+      )
+    )
+  );
+}
+
+// ==================================================
 // ICE
-// --------------------------------------------------
+// ==================================================
 
 function createIce() {
   const geometry =
     new THREE.ShapeGeometry(
       createRinkShape(),
-      64
+      96
     );
 
   const ice =
@@ -195,23 +242,23 @@ function createIce() {
     -Math.PI / 2;
 
   ice.position.y = 0;
-
   ice.receiveShadow = true;
 
   return ice;
 }
 
-// --------------------------------------------------
-// FLAT RECTANGLE MARKING
-// --------------------------------------------------
+// ==================================================
+// GENERIC ICE MARKINGS
+// ==================================================
 
 function createFlatRectangle(
   width,
   depth,
-  colorMaterial,
+  material,
   x = 0,
   z = 0,
-  y = 0.018
+  y = 0.018,
+  rotation = 0
 ) {
   const geometry =
     new THREE.PlaneGeometry(
@@ -222,11 +269,14 @@ function createFlatRectangle(
   const mesh =
     new THREE.Mesh(
       geometry,
-      colorMaterial
+      material
     );
 
   mesh.rotation.x =
     -Math.PI / 2;
+
+  mesh.rotation.z =
+    rotation;
 
   mesh.position.set(
     x,
@@ -237,22 +287,56 @@ function createFlatRectangle(
   return mesh;
 }
 
-// --------------------------------------------------
-// CIRCLE OUTLINE
-// --------------------------------------------------
+function createLineSegment(
+  x1,
+  z1,
+  x2,
+  z2,
+  material,
+  thickness = RINK.thinLineWidth,
+  y = 0.031
+) {
+  const dx =
+    x2 - x1;
+
+  const dz =
+    z2 - z1;
+
+  const length =
+    Math.sqrt(
+      dx * dx +
+      dz * dz
+    );
+
+  return createFlatRectangle(
+    length,
+    thickness,
+    material,
+    (x1 + x2) / 2,
+    (z1 + z2) / 2,
+    y,
+    Math.atan2(
+      dz,
+      dx
+    )
+  );
+}
 
 function createCircleOutline(
   radius,
   x,
   z,
-  material = redMaterial,
-  thickness = 0.12
+  material,
+  thickness = RINK.thinLineWidth
 ) {
   const geometry =
     new THREE.RingGeometry(
-      radius - thickness,
+      Math.max(
+        0.01,
+        radius - thickness
+      ),
       radius,
-      64
+      96
     );
 
   const circle =
@@ -266,233 +350,810 @@ function createCircleOutline(
 
   circle.position.set(
     x,
-    0.026,
+    0.029,
     z
   );
 
   return circle;
 }
 
-// --------------------------------------------------
-// FACE-OFF DOT
-// --------------------------------------------------
-
-function createFaceoffDot(
+function createFaceoffSpot(
   x,
   z,
   material = redMaterial,
-  radius = 0.30
+  radius = FT(1)
 ) {
   const geometry =
     new THREE.CircleGeometry(
       radius,
-      32
+      48
     );
 
-  const dot =
+  const spot =
     new THREE.Mesh(
       geometry,
       material
     );
 
-  dot.rotation.x =
+  spot.rotation.x =
     -Math.PI / 2;
 
-  dot.position.set(
+  spot.position.set(
     x,
-    0.029,
+    0.033,
     z
   );
 
-  return dot;
+  return spot;
 }
 
-// --------------------------------------------------
-// CREASE
-// --------------------------------------------------
+// ==================================================
+// CENTER + BLUE + GOAL LINES
+// ==================================================
 
-function createCrease(
-  side
+function createCenterLine() {
+  const group =
+    new THREE.Group();
+
+  group.add(
+    createFlatRectangle(
+      RINK.centerLineWidth,
+      RINK.width,
+      redMaterial,
+      0,
+      0,
+      0.019
+    )
+  );
+
+  return group;
+}
+
+function createBlueLines() {
+  const group =
+    new THREE.Group();
+
+  group.add(
+    createFlatRectangle(
+      RINK.blueLineWidth,
+      RINK.width,
+      blueMaterial,
+      -RINK.blueLineX,
+      0,
+      0.02
+    )
+  );
+
+  group.add(
+    createFlatRectangle(
+      RINK.blueLineWidth,
+      RINK.width,
+      blueMaterial,
+      RINK.blueLineX,
+      0,
+      0.02
+    )
+  );
+
+  return group;
+}
+
+function createGoalLines() {
+  const group =
+    new THREE.Group();
+
+  for (const side of [-1, 1]) {
+    const x =
+      side *
+      RINK.goalLineX;
+
+    const halfVisibleWidth =
+      rinkHalfWidthAtX(x);
+
+    group.add(
+      createFlatRectangle(
+        RINK.thinLineWidth,
+        halfVisibleWidth * 2,
+        redMaterial,
+        x,
+        0,
+        0.022
+      )
+    );
+  }
+
+  return group;
+}
+
+// ==================================================
+// FACE-OFF MARKINGS
+// ==================================================
+
+function createFaceoffLMarks(
+  x,
+  z
 ) {
+  const group =
+    new THREE.Group();
+
+  const sideOffset =
+    FT(1.75);
+
+  const forwardOffset =
+    FT(1.0);
+
+  const longLength =
+    FT(4);
+
+  const shortLength =
+    FT(2.83);
+
+  for (
+    const sx of [-1, 1]
+  ) {
+    for (
+      const sz of [-1, 1]
+    ) {
+      group.add(
+        createFlatRectangle(
+          RINK.thinLineWidth,
+          longLength,
+          redMaterial,
+          x + sx * sideOffset,
+          z + sz * FT(2.15),
+          0.034
+        )
+      );
+
+      group.add(
+        createFlatRectangle(
+          shortLength,
+          RINK.thinLineWidth,
+          redMaterial,
+          x +
+            sx *
+            (
+              sideOffset +
+              shortLength / 2
+            ),
+          z +
+            sz *
+            forwardOffset,
+          0.034
+        )
+      );
+    }
+  }
+
+  return group;
+}
+
+function createFaceoffMarkings() {
+  const group =
+    new THREE.Group();
+
+  group.add(
+    createCircleOutline(
+      RINK.faceoffRadius,
+      0,
+      0,
+      blueMaterial
+    )
+  );
+
+  group.add(
+    createFaceoffSpot(
+      0,
+      0,
+      blueMaterial,
+      FT(0.5)
+    )
+  );
+
+  const zoneX =
+    FT(69);
+
+  const spotZ =
+    FT(22);
+
+  const endZoneSpots = [
+    [-zoneX, -spotZ],
+    [-zoneX, spotZ],
+    [zoneX, -spotZ],
+    [zoneX, spotZ]
+  ];
+
+  for (
+    const [x, z]
+    of endZoneSpots
+  ) {
+    group.add(
+      createCircleOutline(
+        RINK.faceoffRadius,
+        x,
+        z,
+        redMaterial
+      )
+    );
+
+    group.add(
+      createFaceoffSpot(
+        x,
+        z,
+        redMaterial,
+        FT(1)
+      )
+    );
+
+    group.add(
+      createFaceoffLMarks(
+        x,
+        z
+      )
+    );
+  }
+
+  const neutralX =
+    FT(20);
+
+  const neutralSpots = [
+    [-neutralX, -spotZ],
+    [-neutralX, spotZ],
+    [neutralX, -spotZ],
+    [neutralX, spotZ]
+  ];
+
+  for (
+    const [x, z]
+    of neutralSpots
+  ) {
+    group.add(
+      createFaceoffSpot(
+        x,
+        z,
+        redMaterial,
+        FT(1)
+      )
+    );
+  }
+
+  return group;
+}
+
+// ==================================================
+// GOAL CREASE
+// ==================================================
+
+function createCrease(side) {
+  const group =
+    new THREE.Group();
+
+  const goalX =
+    side *
+    RINK.goalLineX;
+
+  const towardCenter =
+    -side;
+
+  const halfWidth =
+    RINK.creaseHalfWidth;
+
+  const straightDepth =
+    RINK.creaseStraightDepth;
+
   const radius =
     RINK.creaseRadius;
 
-  const shape =
-    new THREE.Shape();
+  const localEndX =
+    towardCenter *
+    straightDepth;
 
-  const goalX =
-    side * RINK.goalLineX;
+  const points = [];
 
-  // Crease extends toward center ice.
-  const direction =
-    -side;
-
-  shape.moveTo(
-    goalX,
-    -radius
+  points.push(
+    new THREE.Vector2(
+      goalX,
+      -halfWidth
+    )
   );
 
-  shape.absarc(
-    goalX,
-    0,
-    radius,
-    -Math.PI / 2,
-    Math.PI / 2,
-    side < 0
+  points.push(
+    new THREE.Vector2(
+      goalX + localEndX,
+      -halfWidth
+    )
   );
 
-  shape.lineTo(
-    goalX,
-    radius
-  );
+  const arcSteps = 36;
 
-  shape.closePath();
+  let startAngle;
+  let endAngle;
 
-  const geometry =
-    new THREE.ShapeGeometry(
-      shape,
-      32
-    );
+  if (side < 0) {
+    const a =
+      Math.atan2(
+        halfWidth,
+        straightDepth
+      );
 
-  const crease =
-    new THREE.Mesh(
-      geometry,
-      creaseMaterial
-    );
+    startAngle = -a;
+    endAngle = a;
+  } else {
+    const a =
+      Math.atan2(
+        halfWidth,
+        straightDepth
+      );
 
-  crease.rotation.x =
-    -Math.PI / 2;
+    startAngle =
+      Math.PI - a;
 
-  crease.position.y =
-    0.021;
-
-  // ShapeGeometry uses XY.
-  // Our x coordinates already match rink x.
-  //
-  // Mirroring ensures the filled portion faces
-  // center ice on both ends.
-
-  if (direction < 0) {
-    crease.scale.x = -1;
+    endAngle =
+      Math.PI + a;
   }
 
-  return crease;
+  for (
+    let i = 0;
+    i <= arcSteps;
+    i++
+  ) {
+    const t =
+      i / arcSteps;
+
+    const angle =
+      THREE.MathUtils.lerp(
+        startAngle,
+        endAngle,
+        t
+      );
+
+    points.push(
+      new THREE.Vector2(
+        goalX +
+          Math.cos(angle) *
+          radius,
+        Math.sin(angle) *
+          radius
+      )
+    );
+  }
+
+  points.push(
+    new THREE.Vector2(
+      goalX,
+      halfWidth
+    )
+  );
+
+  const shape =
+    new THREE.Shape(
+      points
+    );
+
+  const fillGeometry =
+    new THREE.ShapeGeometry(
+      shape
+    );
+
+  const fill =
+    new THREE.Mesh(
+      fillGeometry,
+      creaseFillMaterial
+    );
+
+  fill.rotation.x =
+    -Math.PI / 2;
+
+  fill.position.y =
+    0.024;
+
+  group.add(fill);
+
+  group.add(
+    createLineSegment(
+      goalX,
+      -halfWidth,
+      goalX + localEndX,
+      -halfWidth,
+      redMaterial,
+      RINK.thinLineWidth,
+      0.035
+    )
+  );
+
+  group.add(
+    createLineSegment(
+      goalX,
+      halfWidth,
+      goalX + localEndX,
+      halfWidth,
+      redMaterial,
+      RINK.thinLineWidth,
+      0.035
+    )
+  );
+
+  const curve =
+    new THREE.EllipseCurve(
+      goalX,
+      0,
+      radius,
+      radius,
+      startAngle,
+      endAngle,
+      false,
+      0
+    );
+
+  const curvePoints =
+    curve.getPoints(
+      48
+    );
+
+  for (
+    let i = 0;
+    i <
+      curvePoints.length - 1;
+    i++
+  ) {
+    const a =
+      curvePoints[i];
+
+    const b =
+      curvePoints[i + 1];
+
+    group.add(
+      createLineSegment(
+        a.x,
+        a.y,
+        b.x,
+        b.y,
+        redMaterial,
+        RINK.thinLineWidth,
+        0.036
+      )
+    );
+  }
+
+  const tickDepth =
+    FT(4);
+
+  const tickLength =
+    IN(5);
+
+  const tickX =
+    goalX +
+    towardCenter *
+    tickDepth;
+
+  group.add(
+    createFlatRectangle(
+      tickLength,
+      RINK.thinLineWidth,
+      redMaterial,
+      tickX,
+      -halfWidth,
+      0.037
+    )
+  );
+
+  group.add(
+    createFlatRectangle(
+      tickLength,
+      RINK.thinLineWidth,
+      redMaterial,
+      tickX,
+      halfWidth,
+      0.037
+    )
+  );
+
+  return group;
 }
 
-// --------------------------------------------------
-// GOAL
-// --------------------------------------------------
+// ==================================================
+// GOALTENDER RESTRICTED AREA / TRAPEZOID
+// ==================================================
 
-function createGoal(
-  side
+function createTrapezoid(side) {
+  const group =
+    new THREE.Group();
+
+  const goalX =
+    side *
+    RINK.goalLineX;
+
+  const endX =
+    side *
+    (
+      RINK.halfLength -
+      0.06
+    );
+
+  const goalLineZ =
+    FT(11);
+
+  const endBoardZ =
+    FT(14);
+
+  group.add(
+    createLineSegment(
+      goalX,
+      goalLineZ,
+      endX,
+      endBoardZ,
+      redMaterial,
+      RINK.thinLineWidth,
+      0.04
+    )
+  );
+
+  group.add(
+    createLineSegment(
+      goalX,
+      -goalLineZ,
+      endX,
+      -endBoardZ,
+      redMaterial,
+      RINK.thinLineWidth,
+      0.04
+    )
+  );
+
+  return group;
+}
+
+// ==================================================
+// GOALS
+// ==================================================
+
+function makeCylinderBetween(
+  start,
+  end,
+  radius,
+  material
 ) {
+  const direction =
+    new THREE.Vector3()
+      .subVectors(
+        end,
+        start
+      );
+
+  const length =
+    direction.length();
+
+  const geometry =
+    new THREE.CylinderGeometry(
+      radius,
+      radius,
+      length,
+      14
+    );
+
+  const mesh =
+    new THREE.Mesh(
+      geometry,
+      material
+    );
+
+  mesh.position
+    .copy(start)
+    .add(end)
+    .multiplyScalar(0.5);
+
+  mesh.quaternion.setFromUnitVectors(
+    new THREE.Vector3(
+      0,
+      1,
+      0
+    ),
+    direction
+      .clone()
+      .normalize()
+  );
+
+  mesh.castShadow = true;
+
+  return mesh;
+}
+
+function createGoal(side) {
   const goal =
     new THREE.Group();
 
-  const postMaterial =
-    new THREE.MeshStandardMaterial({
-      color: 0xd71920,
-      roughness: 0.38
-    });
+  const frontX =
+    side *
+    RINK.goalLineX;
 
-  const netMaterial =
-    new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.34,
-      wireframe: true
-    });
+  const backDirection =
+    side;
 
-  const postRadius =
-    0.075;
-
-  const goalWidth =
-    6 * SCALE;
+  const halfGoalWidth =
+    RINK.goalWidth / 2;
 
   const goalHeight =
-    4 * SCALE;
+    RINK.goalHeight;
 
-  const goalDepth =
-    3.5 * SCALE;
+  const baseDepth =
+    FT(3.7);
 
-  const x =
-    side *
-    (
-      RINK.goalLineX +
-      goalDepth * 0.48
+  const topDepth =
+    FT(1.6);
+
+  const backBaseX =
+    frontX +
+    backDirection *
+    baseDepth;
+
+  const backTopX =
+    frontX +
+    backDirection *
+    topDepth;
+
+  const postRadius =
+    IN(1.25);
+
+  const leftPostBottom =
+    new THREE.Vector3(
+      frontX,
+      0.04,
+      -halfGoalWidth
     );
 
-  // Vertical posts
-
-  for (const z of [
-    -goalWidth / 2,
-    goalWidth / 2
-  ]) {
-    const geometry =
-      new THREE.CylinderGeometry(
-        postRadius,
-        postRadius,
-        goalHeight,
-        12
-      );
-
-    const post =
-      new THREE.Mesh(
-        geometry,
-        postMaterial
-      );
-
-    post.position.set(
-      x -
-        side *
-        goalDepth /
-        2,
-      goalHeight / 2,
-      z
+  const leftPostTop =
+    new THREE.Vector3(
+      frontX,
+      goalHeight,
+      -halfGoalWidth
     );
 
-    post.castShadow = true;
+  const rightPostBottom =
+    new THREE.Vector3(
+      frontX,
+      0.04,
+      halfGoalWidth
+    );
 
-    goal.add(post);
-  }
+  const rightPostTop =
+    new THREE.Vector3(
+      frontX,
+      goalHeight,
+      halfGoalWidth
+    );
 
-  // Crossbar
-
-  const crossbarGeometry =
-    new THREE.CylinderGeometry(
+  goal.add(
+    makeCylinderBetween(
+      leftPostBottom,
+      leftPostTop,
       postRadius,
-      postRadius,
-      goalWidth,
-      12
-    );
-
-  const crossbar =
-    new THREE.Mesh(
-      crossbarGeometry,
       postMaterial
-    );
-
-  crossbar.rotation.x =
-    Math.PI / 2;
-
-  crossbar.position.set(
-    x -
-      side *
-      goalDepth /
-      2,
-    goalHeight,
-    0
+    )
   );
 
-  goal.add(crossbar);
+  goal.add(
+    makeCylinderBetween(
+      rightPostBottom,
+      rightPostTop,
+      postRadius,
+      postMaterial
+    )
+  );
 
-  // Basic net volume
+  goal.add(
+    makeCylinderBetween(
+      leftPostTop,
+      rightPostTop,
+      postRadius,
+      postMaterial
+    )
+  );
+
+  const backLeftBottom =
+    new THREE.Vector3(
+      backBaseX,
+      0.04,
+      -halfGoalWidth * 0.92
+    );
+
+  const backRightBottom =
+    new THREE.Vector3(
+      backBaseX,
+      0.04,
+      halfGoalWidth * 0.92
+    );
+
+  goal.add(
+    makeCylinderBetween(
+      leftPostBottom,
+      backLeftBottom,
+      postRadius * 0.75,
+      whiteMaterial
+    )
+  );
+
+  goal.add(
+    makeCylinderBetween(
+      rightPostBottom,
+      backRightBottom,
+      postRadius * 0.75,
+      whiteMaterial
+    )
+  );
+
+  goal.add(
+    makeCylinderBetween(
+      backLeftBottom,
+      backRightBottom,
+      postRadius * 0.75,
+      whiteMaterial
+    )
+  );
+
+  const backLeftTop =
+    new THREE.Vector3(
+      backTopX,
+      goalHeight * 0.72,
+      -halfGoalWidth * 0.86
+    );
+
+  const backRightTop =
+    new THREE.Vector3(
+      backTopX,
+      goalHeight * 0.72,
+      halfGoalWidth * 0.86
+    );
+
+  goal.add(
+    makeCylinderBetween(
+      leftPostTop,
+      backLeftTop,
+      postRadius * 0.7,
+      whiteMaterial
+    )
+  );
+
+  goal.add(
+    makeCylinderBetween(
+      rightPostTop,
+      backRightTop,
+      postRadius * 0.7,
+      whiteMaterial
+    )
+  );
+
+  goal.add(
+    makeCylinderBetween(
+      backLeftTop,
+      backRightTop,
+      postRadius * 0.7,
+      whiteMaterial
+    )
+  );
+
+  goal.add(
+    makeCylinderBetween(
+      backLeftTop,
+      backLeftBottom,
+      postRadius * 0.65,
+      whiteMaterial
+    )
+  );
+
+  goal.add(
+    makeCylinderBetween(
+      backRightTop,
+      backRightBottom,
+      postRadius * 0.65,
+      whiteMaterial
+    )
+  );
 
   const netGeometry =
     new THREE.BoxGeometry(
-      goalDepth,
-      goalHeight,
-      goalWidth
+      baseDepth,
+      goalHeight * 0.95,
+      RINK.goalWidth
     );
 
   const net =
@@ -502,8 +1163,11 @@ function createGoal(
     );
 
   net.position.set(
-    x,
-    goalHeight / 2,
+    frontX +
+      backDirection *
+      baseDepth /
+      2,
+    goalHeight * 0.47,
     0
   );
 
@@ -512,229 +1176,286 @@ function createGoal(
   return goal;
 }
 
-// --------------------------------------------------
-// RINK PERIMETER POINTS
-// --------------------------------------------------
+// ==================================================
+// BOARD / GLASS PERIMETER
+// ==================================================
 
 function getPerimeterPoints() {
   const points = [];
 
-  const halfLength =
-    RINK.length / 2;
+  const halfL =
+    RINK.halfLength;
 
-  const halfWidth =
-    RINK.width / 2;
+  const halfW =
+    RINK.halfWidth;
 
   const r =
     RINK.cornerRadius;
 
-  const straightSegments = 18;
-  const curveSegments = 14;
+  const straightSegments = 8;
+  const curveSegments = 28;
 
-  // Bottom straight
-  for (
-    let i = 0;
-    i <= straightSegments;
-    i++
+  function addStraight(
+    x1,
+    z1,
+    x2,
+    z2,
+    steps,
+    includeStart = true
   ) {
-    const t =
-      i / straightSegments;
+    const start =
+      includeStart ? 0 : 1;
 
-    points.push(
-      new THREE.Vector2(
-        THREE.MathUtils.lerp(
-          -halfLength + r,
-          halfLength - r,
-          t
-        ),
-        -halfWidth
-      )
-    );
-  }
+    for (
+      let i = start;
+      i <= steps;
+      i++
+    ) {
+      const t =
+        i / steps;
 
-  // Bottom-right curve
-  for (
-    let i = 1;
-    i <= curveSegments;
-    i++
-  ) {
-    const angle =
-      THREE.MathUtils.lerp(
-        -Math.PI / 2,
-        0,
-        i / curveSegments
-      );
-
-    points.push(
-      new THREE.Vector2(
-        halfLength -
-          r +
-          Math.cos(angle) *
-          r,
-
-        -halfWidth +
-          r +
-          Math.sin(angle) *
-          r
-      )
-    );
-  }
-
-  // Right straight
-  for (
-    let i = 1;
-    i <= straightSegments;
-    i++
-  ) {
-    const t =
-      i / straightSegments;
-
-    points.push(
-      new THREE.Vector2(
-        halfLength,
-
-        THREE.MathUtils.lerp(
-          -halfWidth + r,
-          halfWidth - r,
-          t
+      points.push(
+        new THREE.Vector2(
+          THREE.MathUtils.lerp(
+            x1,
+            x2,
+            t
+          ),
+          THREE.MathUtils.lerp(
+            z1,
+            z2,
+            t
+          )
         )
-      )
-    );
-  }
-
-  // Top-right curve
-  for (
-    let i = 1;
-    i <= curveSegments;
-    i++
-  ) {
-    const angle =
-      THREE.MathUtils.lerp(
-        0,
-        Math.PI / 2,
-        i / curveSegments
       );
-
-    points.push(
-      new THREE.Vector2(
-        halfLength -
-          r +
-          Math.cos(angle) *
-          r,
-
-        halfWidth -
-          r +
-          Math.sin(angle) *
-          r
-      )
-    );
+    }
   }
 
-  // Top straight
-  for (
-    let i = 1;
-    i <= straightSegments;
-    i++
+  function addArc(
+    cx,
+    cz,
+    radius,
+    startAngle,
+    endAngle,
+    steps
   ) {
-    const t =
-      i / straightSegments;
+    for (
+      let i = 1;
+      i <= steps;
+      i++
+    ) {
+      const t =
+        i / steps;
 
-    points.push(
-      new THREE.Vector2(
+      const a =
         THREE.MathUtils.lerp(
-          halfLength - r,
-          -halfLength + r,
+          startAngle,
+          endAngle,
           t
-        ),
-        halfWidth
-      )
-    );
-  }
+        );
 
-  // Top-left curve
-  for (
-    let i = 1;
-    i <= curveSegments;
-    i++
-  ) {
-    const angle =
-      THREE.MathUtils.lerp(
-        Math.PI / 2,
-        Math.PI,
-        i / curveSegments
-      );
-
-    points.push(
-      new THREE.Vector2(
-        -halfLength +
-          r +
-          Math.cos(angle) *
-          r,
-
-        halfWidth -
-          r +
-          Math.sin(angle) *
-          r
-      )
-    );
-  }
-
-  // Left straight
-  for (
-    let i = 1;
-    i <= straightSegments;
-    i++
-  ) {
-    const t =
-      i / straightSegments;
-
-    points.push(
-      new THREE.Vector2(
-        -halfLength,
-
-        THREE.MathUtils.lerp(
-          halfWidth - r,
-          -halfWidth + r,
-          t
+      points.push(
+        new THREE.Vector2(
+          cx +
+            Math.cos(a) *
+            radius,
+          cz +
+            Math.sin(a) *
+            radius
         )
-      )
-    );
-  }
-
-  // Bottom-left curve
-  for (
-    let i = 1;
-    i <= curveSegments;
-    i++
-  ) {
-    const angle =
-      THREE.MathUtils.lerp(
-        Math.PI,
-        Math.PI * 1.5,
-        i / curveSegments
       );
-
-    points.push(
-      new THREE.Vector2(
-        -halfLength +
-          r +
-          Math.cos(angle) *
-          r,
-
-        -halfWidth +
-          r +
-          Math.sin(angle) *
-          r
-      )
-    );
+    }
   }
+
+  addStraight(
+    -halfL + r,
+    -halfW,
+    halfL - r,
+    -halfW,
+    straightSegments
+  );
+
+  addArc(
+    halfL - r,
+    -halfW + r,
+    r,
+    -Math.PI / 2,
+    0,
+    curveSegments
+  );
+
+  addStraight(
+    halfL,
+    -halfW + r,
+    halfL,
+    halfW - r,
+    straightSegments,
+    false
+  );
+
+  addArc(
+    halfL - r,
+    halfW - r,
+    r,
+    0,
+    Math.PI / 2,
+    curveSegments
+  );
+
+  addStraight(
+    halfL - r,
+    halfW,
+    -halfL + r,
+    halfW,
+    straightSegments,
+    false
+  );
+
+  addArc(
+    -halfL + r,
+    halfW - r,
+    r,
+    Math.PI / 2,
+    Math.PI,
+    curveSegments
+  );
+
+  addStraight(
+    -halfL,
+    halfW - r,
+    -halfL,
+    -halfW + r,
+    straightSegments,
+    false
+  );
+
+  addArc(
+    -halfL + r,
+    -halfW + r,
+    r,
+    Math.PI,
+    Math.PI * 1.5,
+    curveSegments
+  );
 
   return points;
 }
 
-// --------------------------------------------------
-// SEGMENTED BOARDS + GLASS
-// --------------------------------------------------
+function createPerimeterSegment(
+  a,
+  b,
+  boardHeight,
+  glassHeight
+) {
+  const group =
+    new THREE.Group();
+
+  const dx =
+    b.x - a.x;
+
+  const dz =
+    b.y - a.y;
+
+  const length =
+    Math.sqrt(
+      dx * dx +
+      dz * dz
+    );
+
+  const centerX =
+    (a.x + b.x) / 2;
+
+  const centerZ =
+    (a.y + b.y) / 2;
+
+  const angle =
+    Math.atan2(
+      dz,
+      dx
+    );
+
+  const boardGeometry =
+    new THREE.BoxGeometry(
+      length + 0.035,
+      boardHeight,
+      RINK.boardThickness
+    );
+
+  const board =
+    new THREE.Mesh(
+      boardGeometry,
+      boardMaterial
+    );
+
+  board.position.set(
+    centerX,
+    boardHeight / 2,
+    centerZ
+  );
+
+  board.rotation.y =
+    -angle;
+
+  board.castShadow = true;
+  board.receiveShadow = true;
+
+  group.add(board);
+
+  const kickHeight =
+    FT(0.75);
+
+  const kickGeometry =
+    new THREE.BoxGeometry(
+      length + 0.04,
+      kickHeight,
+      RINK.boardThickness +
+        0.015
+    );
+
+  const kick =
+    new THREE.Mesh(
+      kickGeometry,
+      kickplateMaterial
+    );
+
+  kick.position.set(
+    centerX,
+    kickHeight / 2,
+    centerZ
+  );
+
+  kick.rotation.y =
+    -angle;
+
+  group.add(kick);
+
+  const glassGeometry =
+    new THREE.BoxGeometry(
+      length + 0.015,
+      glassHeight,
+      0.045
+    );
+
+  const glass =
+    new THREE.Mesh(
+      glassGeometry,
+      glassMaterial
+    );
+
+  glass.position.set(
+    centerX,
+    boardHeight +
+      glassHeight / 2,
+    centerZ
+  );
+
+  glass.rotation.y =
+    -angle;
+
+  group.add(glass);
+
+  return group;
+}
 
 function createPerimeter() {
   const group =
@@ -757,357 +1478,57 @@ function createPerimeter() {
         points.length
       ];
 
-    const dx =
-      b.x - a.x;
-
-    const dz =
-      b.y - a.y;
-
-    const length =
-      Math.sqrt(
-        dx * dx +
-        dz * dz
-      );
-
-    const centerX =
+    const midpointX =
       (a.x + b.x) / 2;
 
-    const centerZ =
-      (a.y + b.y) / 2;
+    const nearEnd =
+      Math.abs(
+        midpointX
+      ) >
+      FT(72);
 
-    const angle =
-      Math.atan2(
-        dz,
-        dx
-      );
+    const glassHeight =
+      nearEnd
+        ? RINK.glassHeightEnd
+        : RINK.glassHeightSide;
 
-    // --------------------------------------------
-    // WHITE BOARD
-    // --------------------------------------------
-
-    const boardGeometry =
-      new THREE.BoxGeometry(
-        length + 0.05,
+    group.add(
+      createPerimeterSegment(
+        a,
+        b,
         RINK.boardHeight,
-        RINK.boardThickness
-      );
-
-    const board =
-      new THREE.Mesh(
-        boardGeometry,
-        boardMaterial
-      );
-
-    board.position.set(
-      centerX,
-      RINK.boardHeight / 2,
-      centerZ
+        glassHeight
+      )
     );
-
-    board.rotation.y =
-      -angle;
-
-    board.castShadow = true;
-    board.receiveShadow = true;
-
-    group.add(board);
-
-    // --------------------------------------------
-    // YELLOW KICKPLATE
-    // --------------------------------------------
-
-    const kickHeight =
-      0.22;
-
-    const kickGeometry =
-      new THREE.BoxGeometry(
-        length + 0.055,
-        kickHeight,
-        RINK.boardThickness +
-          0.015
-      );
-
-    const kick =
-      new THREE.Mesh(
-        kickGeometry,
-        yellowKickplateMaterial
-      );
-
-    kick.position.set(
-      centerX,
-      kickHeight / 2,
-      centerZ
-    );
-
-    kick.rotation.y =
-      -angle;
-
-    group.add(kick);
-
-    // --------------------------------------------
-    // GLASS
-    // --------------------------------------------
-
-    const glassGeometry =
-      new THREE.BoxGeometry(
-        length,
-        RINK.glassHeight,
-        0.045
-      );
-
-    const glass =
-      new THREE.Mesh(
-        glassGeometry,
-        glassMaterial
-      );
-
-    glass.position.set(
-      centerX,
-
-      RINK.boardHeight +
-        RINK.glassHeight /
-        2,
-
-      centerZ
-    );
-
-    glass.rotation.y =
-      -angle;
-
-    group.add(glass);
   }
 
   return group;
 }
 
-// --------------------------------------------------
-// GOALIE TRAPEZOID
-// --------------------------------------------------
-
-function createTrapezoid(
-  side
-) {
-  const group =
-    new THREE.Group();
-
-  const goalX =
-    side *
-    RINK.goalLineX;
-
-  const endX =
-    side *
-    (
-      RINK.length / 2 -
-      0.25
-    );
-
-  const innerZ =
-    5.5 * SCALE;
-
-  const outerZ =
-    11 * SCALE;
-
-  function createSegment(
-    x1,
-    z1,
-    x2,
-    z2
-  ) {
-    const dx =
-      x2 - x1;
-
-    const dz =
-      z2 - z1;
-
-    const length =
-      Math.sqrt(
-        dx * dx +
-        dz * dz
-      );
-
-    const geometry =
-      new THREE.PlaneGeometry(
-        length,
-        0.10
-      );
-
-    const line =
-      new THREE.Mesh(
-        geometry,
-        redMaterial
-      );
-
-    line.rotation.x =
-      -Math.PI / 2;
-
-    line.rotation.z =
-      Math.atan2(
-        dz,
-        dx
-      );
-
-    line.position.set(
-      (x1 + x2) / 2,
-      0.031,
-      (z1 + z2) / 2
-    );
-
-    group.add(line);
-  }
-
-  createSegment(
-    goalX,
-    innerZ,
-    endX,
-    outerZ
-  );
-
-  createSegment(
-    goalX,
-    -innerZ,
-    endX,
-    -outerZ
-  );
-
-  return group;
-}
-
-// --------------------------------------------------
+// ==================================================
 // ALL ICE MARKINGS
-// --------------------------------------------------
+// ==================================================
 
 function createMarkings() {
   const group =
     new THREE.Group();
 
-  // Center red line
   group.add(
-    createFlatRectangle(
-      0.16,
-      RINK.width,
-      redMaterial
-    )
-  );
-
-  // Blue lines
-  group.add(
-    createFlatRectangle(
-      0.24,
-      RINK.width,
-      blueMaterial,
-      -RINK.blueLineX
-    )
+    createCenterLine()
   );
 
   group.add(
-    createFlatRectangle(
-      0.24,
-      RINK.width,
-      blueMaterial,
-      RINK.blueLineX
-    )
-  );
-
-  // Goal lines
-  group.add(
-    createFlatRectangle(
-      0.11,
-      RINK.width,
-      redMaterial,
-      -RINK.goalLineX
-    )
+    createBlueLines()
   );
 
   group.add(
-    createFlatRectangle(
-      0.11,
-      RINK.width,
-      redMaterial,
-      RINK.goalLineX
-    )
+    createGoalLines()
   );
 
-  // Center circle
   group.add(
-    createCircleOutline(
-      RINK.faceoffRadius,
-      0,
-      0
-    )
+    createFaceoffMarkings()
   );
 
-  // Center dot
-  group.add(
-    createFaceoffDot(
-      0,
-      0,
-      blueMaterial,
-      0.27
-    )
-  );
-
-  // Offensive-zone circles
-
-  const zoneX =
-    69 * SCALE;
-
-  const dotZ =
-    22 * SCALE;
-
-  const offensiveDots = [
-    [-zoneX, -dotZ],
-    [-zoneX, dotZ],
-    [zoneX, -dotZ],
-    [zoneX, dotZ]
-  ];
-
-  for (
-    const [x, z]
-    of offensiveDots
-  ) {
-    group.add(
-      createCircleOutline(
-        RINK.faceoffRadius,
-        x,
-        z
-      )
-    );
-
-    group.add(
-      createFaceoffDot(
-        x,
-        z
-      )
-    );
-  }
-
-  // Neutral-zone dots
-
-  const neutralX =
-    20 * SCALE;
-
-  const neutralDots = [
-    [-neutralX, -dotZ],
-    [-neutralX, dotZ],
-    [neutralX, -dotZ],
-    [neutralX, dotZ]
-  ];
-
-  for (
-    const [x, z]
-    of neutralDots
-  ) {
-    group.add(
-      createFaceoffDot(
-        x,
-        z,
-        redMaterial,
-        0.24
-      )
-    );
-  }
-
-  // Creases
   group.add(
     createCrease(-1)
   );
@@ -1116,7 +1537,6 @@ function createMarkings() {
     createCrease(1)
   );
 
-  // Trapezoids
   group.add(
     createTrapezoid(-1)
   );
@@ -1128,36 +1548,29 @@ function createMarkings() {
   return group;
 }
 
-// --------------------------------------------------
+// ==================================================
 // CREATE COMPLETE RINK
-// --------------------------------------------------
+// ==================================================
 
-export function createRink(
-  scene
-) {
+export function createRink(scene) {
   const rink =
     new THREE.Group();
 
   rink.name =
     "hockey-rink";
 
-  // Ice
-  const ice =
-    createIce();
+  rink.add(
+    createIce()
+  );
 
-  rink.add(ice);
-
-  // Markings
   rink.add(
     createMarkings()
   );
 
-  // Boards / glass
   rink.add(
     createPerimeter()
   );
 
-  // Goals
   rink.add(
     createGoal(-1)
   );
