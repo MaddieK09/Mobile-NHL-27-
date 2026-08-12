@@ -176,42 +176,55 @@ scene.add(
   aimIndicatorGroup
 );
 
-// Giant debug arrow: intentionally impossible to miss.
-// Once we prove this renders on-device, we'll replace it
-// with the subtle on-ice guide.
-const debugAimArrow =
+// Polished shot aiming arrow.
+//
+// This keeps the proven ArrowHelper rendering path from the
+// debug build, but makes it subtle enough for gameplay.
+const aimArrow =
   new THREE.ArrowHelper(
     new THREE.Vector3(0, 0, -1),
-    new THREE.Vector3(0, 2.5, 0),
-    7,
-    0xff00ff,
-    1.8,
-    0.9
+    new THREE.Vector3(0, 0.32, 0),
+    3.2,
+    0x3fd8ff,
+    0.72,
+    0.34
   );
 
-debugAimArrow.visible =
+aimArrow.visible =
   false;
 
-debugAimArrow.line.material.depthTest =
+aimArrow.line.material.transparent =
+  true;
+
+aimArrow.line.material.opacity =
+  0.78;
+
+aimArrow.line.material.depthTest =
   false;
 
-debugAimArrow.line.material.depthWrite =
+aimArrow.line.material.depthWrite =
   false;
 
-debugAimArrow.cone.material.depthTest =
+aimArrow.cone.material.transparent =
+  true;
+
+aimArrow.cone.material.opacity =
+  0.94;
+
+aimArrow.cone.material.depthTest =
   false;
 
-debugAimArrow.cone.material.depthWrite =
+aimArrow.cone.material.depthWrite =
   false;
 
-debugAimArrow.line.renderOrder =
-  1000;
+aimArrow.line.renderOrder =
+  700;
 
-debugAimArrow.cone.renderOrder =
-  1001;
+aimArrow.cone.renderOrder =
+  701;
 
 scene.add(
-  debugAimArrow
+  aimArrow
 );
 
 const aimLineMaterial =
@@ -430,7 +443,7 @@ function updateShotAimIndicator(
     true;
 }
 
-function updateDebugAimArrow(
+function updateAimArrow(
   direction,
   charge
 ) {
@@ -439,7 +452,7 @@ function updateDebugAimArrow(
     direction.lengthSq() <
       0.0001
   ) {
-    debugAimArrow.visible =
+    aimArrow.visible =
       false;
 
     return;
@@ -448,44 +461,98 @@ function updateDebugAimArrow(
   const puckPosition =
     puck.getPosition();
 
-  const debugDirection =
+  const aimDirection =
     direction.clone();
 
-  debugDirection.y = 0;
+  aimDirection.y = 0;
 
   if (
-    debugDirection.lengthSq() <
+    aimDirection.lengthSq() <
       0.0001
   ) {
-    debugAimArrow.visible =
+    aimArrow.visible =
       false;
 
     return;
   }
 
-  debugDirection.normalize();
+  aimDirection.normalize();
 
-  debugAimArrow.position.set(
+  aimArrow.position.set(
     puckPosition.x,
-    2.5,
+    0.32,
     puckPosition.z
   );
 
-  debugAimArrow.setDirection(
-    debugDirection
+  aimArrow.setDirection(
+    aimDirection
   );
 
-  debugAimArrow.setLength(
+  const arrowLength =
     THREE.MathUtils.lerp(
-      5,
-      10,
+      2.8,
+      6.2,
       charge
-    ),
-    1.8,
-    0.9
+    );
+
+  const headLength =
+    THREE.MathUtils.lerp(
+      0.60,
+      0.90,
+      charge
+    );
+
+  const headWidth =
+    THREE.MathUtils.lerp(
+      0.28,
+      0.42,
+      charge
+    );
+
+  aimArrow.setLength(
+    arrowLength,
+    headLength,
+    headWidth
   );
 
-  debugAimArrow.visible =
+  const lineOpacity =
+    THREE.MathUtils.lerp(
+      0.58,
+      0.92,
+      charge
+    );
+
+  aimArrow.line.material.opacity =
+    lineOpacity;
+
+  aimArrow.cone.material.opacity =
+    Math.min(
+      1,
+      lineOpacity + 0.12
+    );
+
+  // Slightly shift color toward white as power builds.
+  const lowColor =
+    new THREE.Color(
+      0x3fd8ff
+    );
+
+  const highColor =
+    new THREE.Color(
+      0xffffff
+    );
+
+  const mixedColor =
+    lowColor.lerp(
+      highColor,
+      charge * 0.45
+    );
+
+  aimArrow.setColor(
+    mixedColor
+  );
+
+  aimArrow.visible =
     true;
 }
 
@@ -610,7 +677,7 @@ function animate() {
         shotCharge
       );
 
-      updateDebugAimArrow(
+      updateAimArrow(
         shotAimDirection,
         shotCharge
       );
@@ -618,14 +685,14 @@ function animate() {
       aimIndicatorGroup.visible =
         false;
 
-      debugAimArrow.visible =
+      aimArrow.visible =
         false;
     }
   } else {
     aimIndicatorGroup.visible =
       false;
 
-    debugAimArrow.visible =
+    aimArrow.visible =
       false;
   }
 
@@ -639,7 +706,7 @@ function animate() {
     aimIndicatorGroup.visible =
       false;
 
-    debugAimArrow.visible =
+    aimArrow.visible =
       false;
   }
 
