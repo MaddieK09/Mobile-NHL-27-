@@ -209,24 +209,22 @@ export class CameraManager {
     const playerPosition =
       this.getPlayerPosition();
 
-    // NHL-style dynamic follow camera:
-    // follow the skater's POSITION, not their facing.
+    // Stable NHL-style follow camera.
     //
-    // This keeps "up" on the joystick consistent instead
-    // of making the whole camera swing around every time
-    // the player turns.
+    // The camera moves WITH the player but does not orbit
+    // around them. That keeps the rink orientation locked:
+    // screen-up stays screen-up and screen-right stays
+    // screen-right while skating.
     this.desiredPosition.set(
-      playerPosition.x * 0.82,
-      10.5,
-      playerPosition.z + 15.5
+      playerPosition.x,
+      11.5,
+      playerPosition.z + 16.0
     );
 
-    // Look slightly ahead toward the far end of the rink,
-    // but keep the rink orientation stable.
     this.desiredLookTarget.set(
       playerPosition.x,
-      0.7,
-      playerPosition.z - 3.8
+      0.65,
+      playerPosition.z - 4.2
     );
   }
 
@@ -379,6 +377,126 @@ export class CameraManager {
         this.calculateDynamic();
         break;
     }
+  }
+
+  // ------------------------------------------------
+  // SCREEN / JOYSTICK MOVEMENT -> WORLD MOVEMENT
+  // ------------------------------------------------
+
+  getWorldMovement(movement) {
+    const inputX =
+      movement?.x ?? 0;
+
+    const inputY =
+      movement?.y ?? 0;
+
+    const rawMagnitude =
+      THREE.MathUtils.clamp(
+        movement?.magnitude ??
+          Math.sqrt(
+            inputX * inputX +
+            inputY * inputY
+          ),
+        0,
+        1
+      );
+
+    // Ignore tiny thumb movement around the center of
+    // the virtual stick so the skater does not drift.
+    const deadzone = 0.12;
+
+    if (rawMagnitude <= deadzone) {
+      return {
+        x: 0,
+        y: 0,
+        magnitude: 0
+      };
+    }
+
+    const adjustedMagnitude =
+      (rawMagnitude - deadzone) /
+      (1 - deadzone);
+
+    let normalizedX =
+      inputX;
+
+    let normalizedY =
+      inputY;
+
+    const inputLength =
+      Math.sqrt(
+        normalizedX * normalizedX +
+        normalizedY * normalizedY
+      );
+
+    if (inputLength > 0.0001) {
+      normalizedX /= inputLength;
+      normalizedY /= inputLength;
+    }
+
+    // Camera forward, flattened onto the ice.
+    this.camera.getWorldDirection(
+      this.tempVector
+    );
+
+    this.tempVector.y = 0;
+
+    if (
+      this.tempVector.lengthSq() <
+      0.0001
+    ) {
+      this.tempVector.set(
+        0,
+        0,
+        -1
+      );
+    }
+
+    this.tempVector.normalize();
+
+    const cameraForward =
+      this.tempVector.clone();
+
+    // For a camera facing -Z, this resolves to +X,
+    // which is screen-right.
+    const cameraRight =
+      new THREE.Vector3()
+        .crossVectors(
+          cameraForward,
+          this.up
+        )
+        .normalize();
+
+    const worldDirection =
+      new THREE.Vector3()
+        .addScaledVector(
+          cameraRight,
+          normalizedX
+        )
+        .addScaledVector(
+          cameraForward,
+          normalizedY
+        );
+
+    if (
+      worldDirection.lengthSq() >
+      0.0001
+    ) {
+      worldDirection.normalize();
+    }
+
+    // player.js currently expects x plus a joystick-style
+    // y value, and internally converts y to world Z.
+    return {
+      x: worldDirection.x,
+      y: -worldDirection.z,
+      magnitude:
+        THREE.MathUtils.clamp(
+          adjustedMagnitude,
+          0,
+          1
+        )
+    };
   }
 
   // ------------------------------------------------
