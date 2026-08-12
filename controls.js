@@ -17,6 +17,13 @@ export class Controls {
     this.moveX = 0;
     this.moveY = 0;
 
+    // One-shot hockey actions.
+    // consumeAction() clears these after game.js reads them.
+    this.actions = {
+      shoot: false,
+      pass: false
+    };
+
     this.joystickActive = false;
 
     this.pointerId = null;
@@ -37,7 +44,9 @@ export class Controls {
     };
 
     this.createJoystick();
+    this.createActionButtons();
     this.setupTouchControls();
+    this.setupActionControls();
     this.setupKeyboardControls();
   }
 
@@ -126,6 +135,173 @@ export class Controls {
 
     document.body.appendChild(
       this.joystickBase
+    );
+  }
+
+  // ------------------------------------------------
+  // MOBILE HOCKEY BUTTONS
+  // ------------------------------------------------
+
+  createActionButtons() {
+    this.actionContainer =
+      document.createElement("div");
+
+    this.actionContainer.id =
+      "hockey-actions";
+
+    Object.assign(
+      this.actionContainer.style,
+      {
+        position: "fixed",
+        right: "28px",
+        bottom: "30px",
+        width: "190px",
+        height: "150px",
+        zIndex: "210",
+        pointerEvents: "none",
+        userSelect: "none",
+        WebkitUserSelect: "none"
+      }
+    );
+
+    this.shootButton =
+      this.createActionButton(
+        "SHOOT",
+        "shoot-button",
+        86,
+        86
+      );
+
+    this.passButton =
+      this.createActionButton(
+        "PASS",
+        "pass-button",
+        72,
+        72
+      );
+
+    Object.assign(
+      this.shootButton.style,
+      {
+        position: "absolute",
+        right: "0px",
+        bottom: "24px"
+      }
+    );
+
+    Object.assign(
+      this.passButton.style,
+      {
+        position: "absolute",
+        right: "92px",
+        bottom: "0px"
+      }
+    );
+
+    this.actionContainer.appendChild(
+      this.shootButton
+    );
+
+    this.actionContainer.appendChild(
+      this.passButton
+    );
+
+    document.body.appendChild(
+      this.actionContainer
+    );
+  }
+
+  createActionButton(
+    label,
+    id,
+    width,
+    height
+  ) {
+    const button =
+      document.createElement("button");
+
+    button.id = id;
+    button.textContent = label;
+
+    Object.assign(
+      button.style,
+      {
+        width: `${width}px`,
+        height: `${height}px`,
+        borderRadius: "50%",
+        border:
+          "3px solid rgba(255,255,255,0.34)",
+        background:
+          "rgba(15,35,58,0.70)",
+        color: "#ffffff",
+        fontSize: "14px",
+        fontWeight: "800",
+        letterSpacing: "0.5px",
+        boxShadow:
+          "0 5px 18px rgba(0,0,0,0.35)",
+        touchAction: "none",
+        pointerEvents: "auto",
+        WebkitTapHighlightColor:
+          "transparent"
+      }
+    );
+
+    return button;
+  }
+
+  setupActionControls() {
+    const bindAction =
+      (button, actionName) => {
+        button.addEventListener(
+          "pointerdown",
+          (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            this.actions[
+              actionName
+            ] = true;
+
+            button.style.transform =
+              "scale(0.90)";
+          }
+        );
+
+        const release =
+          (event) => {
+            if (event) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+
+            button.style.transform =
+              "scale(1)";
+          };
+
+        button.addEventListener(
+          "pointerup",
+          release
+        );
+
+        button.addEventListener(
+          "pointercancel",
+          release
+        );
+
+        button.addEventListener(
+          "pointerleave",
+          release
+        );
+      };
+
+    bindAction(
+      this.shootButton,
+      "shoot"
+    );
+
+    bindAction(
+      this.passButton,
+      "pass"
     );
   }
 
@@ -341,11 +517,47 @@ export class Controls {
     ) {
       this.keys.right = pressed;
     }
+
+    // Desktop testing:
+    // Space = shoot
+    // E = pass
+    if (
+      pressed &&
+      code === "Space"
+    ) {
+      this.actions.shoot = true;
+    }
+
+    if (
+      pressed &&
+      code === "KeyE"
+    ) {
+      this.actions.pass = true;
+    }
   }
 
   // ------------------------------------------------
   // GET MOVEMENT
   // ------------------------------------------------
+
+  consumeAction(actionName) {
+    if (
+      !Object.prototype.hasOwnProperty.call(
+        this.actions,
+        actionName
+      )
+    ) {
+      return false;
+    }
+
+    const active =
+      this.actions[actionName];
+
+    this.actions[actionName] =
+      false;
+
+    return active;
+  }
 
   getMovement() {
     let x =
