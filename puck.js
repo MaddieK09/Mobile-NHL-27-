@@ -37,6 +37,14 @@ export class HockeyPuck {
     this.height =
       options.height ?? 0.025;
 
+    // Keep gameplay/physics dimensions realistic, but make
+    // the rendered puck easier to track on a phone screen.
+    this.visualScale =
+      options.visualScale ?? 1.75;
+
+    this.indicatorRadius =
+      options.indicatorRadius ?? 0.18;
+
     this.position =
       new THREE.Vector3(
         options.x ?? 0,
@@ -82,8 +90,19 @@ export class HockeyPuck {
       this.position
     );
 
+    this.indicator =
+      this.createIndicator();
+
+    this.indicator.position.copy(
+      this.position
+    );
+
     this.scene.add(
       this.mesh
+    );
+
+    this.scene.add(
+      this.indicator
     );
   }
 
@@ -94,9 +113,12 @@ export class HockeyPuck {
   createMesh() {
     const geometry =
       new THREE.CylinderGeometry(
-        this.radius,
-        this.radius,
-        this.height,
+        this.radius *
+          this.visualScale,
+        this.radius *
+          this.visualScale,
+        this.height *
+          this.visualScale,
         40,
         1,
         false
@@ -118,6 +140,38 @@ export class HockeyPuck {
     mesh.receiveShadow = true;
 
     return mesh;
+  }
+
+  createIndicator() {
+    const geometry =
+      new THREE.RingGeometry(
+        this.indicatorRadius * 0.62,
+        this.indicatorRadius,
+        40
+      );
+
+    const material =
+      new THREE.MeshBasicMaterial({
+        color: 0x111111,
+        transparent: true,
+        opacity: 0.28,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+
+    const indicator =
+      new THREE.Mesh(
+        geometry,
+        material
+      );
+
+    indicator.rotation.x =
+      -Math.PI / 2;
+
+    indicator.position.y =
+      0.008;
+
+    return indicator;
   }
 
   // ------------------------------------------------
@@ -469,6 +523,18 @@ export class HockeyPuck {
     this.mesh.position.copy(
       this.position
     );
+
+    this.indicator.position.set(
+      this.position.x,
+      0.008,
+      this.position.z
+    );
+
+    // The subtle locator is most useful when the puck is
+    // loose. Hide it during possession so stick carrying
+    // still looks clean.
+    this.indicator.visible =
+      !this.isPossessed();
 
     // Visual spin while moving.
     const speed =
