@@ -94,6 +94,17 @@ export class HockeyPuck {
     this.bladeWorldPosition =
       new THREE.Vector3();
 
+    // Possession dynamics. These let the puck feel controlled
+    // by the stick without being perfectly welded to it.
+    this.possessionOffset =
+      new THREE.Vector3();
+
+    this.possessionLag =
+      new THREE.Vector3();
+
+    this.lastCarryTarget =
+      new THREE.Vector3();
+
     this.mesh =
       this.createMesh();
 
@@ -294,8 +305,17 @@ export class HockeyPuck {
       return;
     }
 
-    // Best path: follow the actual stick-blade attachment
-    // point exposed by player.js.
+    const forward =
+      this.getPlayerForward(
+        player
+      );
+
+    const right =
+      this.getPlayerRight(
+        player
+      );
+
+    // Best path: follow the real blade attachment point.
     if (
       typeof player.getPuckControlPoint ===
       "function"
@@ -307,13 +327,7 @@ export class HockeyPuck {
       this.carryTarget.copy(
         this.bladeWorldPosition
       );
-
-      this.carryTarget.y =
-        this.height / 2 +
-        0.012;
     } else {
-      // Fallback for any player model that does not yet
-      // expose a blade attachment point.
       const playerPosition =
         player.getPosition
           ? player.getPosition()
@@ -322,16 +336,6 @@ export class HockeyPuck {
       if (!playerPosition) {
         return;
       }
-
-      const forward =
-        this.getPlayerForward(
-          player
-        );
-
-      const right =
-        this.getPlayerRight(
-          player
-        );
 
       this.carryTarget
         .copy(playerPosition)
@@ -344,19 +348,92 @@ export class HockeyPuck {
           this.carryRight *
             this.carrySide
         );
-
-      this.carryTarget.y =
-        this.height / 2 +
-        0.012;
     }
 
-    // Smooth follow so the puck feels controlled by the blade
-    // without looking welded to a fixed body coordinate.
+    // Let the puck sweep slightly across / ahead of the blade
+    // instead of staying on one exact local point.
+    const sway =
+      typeof player.getStickhandleSway ===
+      "function"
+        ? player.getStickhandleSway()
+        : 0;
+
+    const speed =
+      player.speed ?? 0;
+
+    const turnRate =
+      typeof player.getTurnRate ===
+      "function"
+        ? player.getTurnRate()
+        : 0;
+
+    const turnAmount =
+      THREE.MathUtils.clamp(
+        turnRate / 3.2,
+        -1,
+        1
+      );
+
+    this.possessionOffset
+      .set(0, 0, 0)
+      .addScaledVector(
+        right,
+        sway * 0.42
+      )
+      .addScaledVector(
+        forward,
+        0.035 +
+          Math.min(
+            speed / 8,
+            1
+          ) * 0.08
+      );
+
+    this.carryTarget.add(
+      this.possessionOffset
+    );
+
+    // During harder turns, the puck resists the change of
+    // direction for a fraction of a second. This creates the
+    // visual "lag" that was missing from the rigid version.
+    this.possessionLag
+      .multiplyScalar(
+        Math.exp(
+          -10 * delta
+        )
+      )
+      .addScaledVector(
+        right,
+        -turnAmount *
+          speed *
+          delta *
+          0.22
+      );
+
+    this.carryTarget.add(
+      this.possessionLag
+    );
+
+    this.carryTarget.y =
+      this.height / 2 +
+      0.012;
+
+    // Faster near the blade, but not instant.
+    const followSpeed =
+      THREE.MathUtils.lerp(
+        16,
+        24,
+        Math.min(
+          speed / 8,
+          1
+        )
+      );
+
     const followAlpha =
       delta > 0
         ? 1 -
           Math.exp(
-            -this.carryFollowSpeed *
+            -followSpeed *
             delta
           )
         : 1;
@@ -364,6 +441,10 @@ export class HockeyPuck {
     this.position.lerp(
       this.carryTarget,
       followAlpha
+    );
+
+    this.lastCarryTarget.copy(
+      this.carryTarget
     );
 
     this.velocity.set(
