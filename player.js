@@ -36,6 +36,16 @@ export class HockeyPlayer {
     this.deceleration = options.deceleration ?? 14;
     this.turnSpeed = options.turnSpeed ?? 3.2;
 
+    // Skating movement state.
+    this.velocity = new THREE.Vector3();
+    this.moveDirection = new THREE.Vector3();
+    this.inputMagnitude = 0;
+
+    // Temporary rink limits. These keep the skater on the ice until
+    // collision with the actual rounded boards is added.
+    this.rinkHalfLength = options.rinkHalfLength ?? 28.8;
+    this.rinkHalfWidth = options.rinkHalfWidth ?? 11.7;
+
     this.height = options.height ?? 1.85;
 
     this.teamColor = options.teamColor ?? 0x1f5dbb;
@@ -546,10 +556,129 @@ export class HockeyPlayer {
   // UPDATE
   // ------------------------------------------------
 
-  update(delta) {
-    // Movement comes next from controls.js.
+  update(delta, movement = null) {
+    const inputX = movement?.x ?? 0;
+    const inputY = movement?.y ?? 0;
+
+    this.inputMagnitude = Math.min(
+      movement?.magnitude ??
+        Math.sqrt(
+          inputX * inputX +
+          inputY * inputY
+        ),
+      1
+    );
+
+    // World-space skating direction.
     //
-    // For now we only keep the player group synced.
+    // Joystick up = toward the far end of the rink (-Z).
+    // Joystick right = +X.
+    this.moveDirection.set(
+      inputX,
+      0,
+      -inputY
+    );
+
+    if (
+      this.moveDirection.lengthSq() >
+      0.0001
+    ) {
+      this.moveDirection.normalize();
+
+      const targetSpeed =
+        this.maxSpeed *
+        this.inputMagnitude;
+
+      this.speed = Math.min(
+        this.speed +
+          this.acceleration *
+          delta,
+        targetSpeed
+      );
+
+      // Smoothly face the direction of travel.
+      const targetRotation =
+        Math.atan2(
+          this.moveDirection.x,
+          this.moveDirection.z
+        );
+
+      let rotationDifference =
+        targetRotation -
+        this.rotation;
+
+      rotationDifference =
+        Math.atan2(
+          Math.sin(rotationDifference),
+          Math.cos(rotationDifference)
+        );
+
+      const maxTurn =
+        this.turnSpeed *
+        delta;
+
+      this.rotation +=
+        THREE.MathUtils.clamp(
+          rotationDifference,
+          -maxTurn,
+          maxTurn
+        );
+
+      // Skate in the requested direction.
+      this.velocity.copy(
+        this.moveDirection
+      );
+
+      this.velocity.multiplyScalar(
+        this.speed
+      );
+    } else {
+      // Glide to a stop instead of stopping instantly.
+      this.speed = Math.max(
+        0,
+        this.speed -
+          this.deceleration *
+          delta
+      );
+
+      if (this.speed <= 0.001) {
+        this.speed = 0;
+        this.velocity.set(
+          0,
+          0,
+          0
+        );
+      } else if (
+        this.velocity.lengthSq() >
+        0.0001
+      ) {
+        this.velocity
+          .normalize()
+          .multiplyScalar(
+            this.speed
+          );
+      }
+    }
+
+    this.position.addScaledVector(
+      this.velocity,
+      delta
+    );
+
+    // Temporary board containment.
+    this.position.x =
+      THREE.MathUtils.clamp(
+        this.position.x,
+        -this.rinkHalfLength,
+        this.rinkHalfLength
+      );
+
+    this.position.z =
+      THREE.MathUtils.clamp(
+        this.position.z,
+        -this.rinkHalfWidth,
+        this.rinkHalfWidth
+      );
 
     this.group.position.copy(
       this.position
