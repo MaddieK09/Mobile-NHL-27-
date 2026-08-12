@@ -72,6 +72,25 @@ export class HockeyPuck {
     this.pickupRadius =
       options.pickupRadius ?? 1.35;
 
+    // Loose-puck control tuning.
+    this.pickupFrontDot =
+      options.pickupFrontDot ?? -0.15;
+
+    this.pickupCooldown =
+      options.pickupCooldown ?? 0;
+
+    this.repickupDelay =
+      options.repickupDelay ?? 0.28;
+
+    this.controlBreakDistance =
+      options.controlBreakDistance ?? 0.82;
+
+    this.controlBreakTurnRate =
+      options.controlBreakTurnRate ?? 2.65;
+
+    this.controlBreakMinSpeed =
+      options.controlBreakMinSpeed ?? 5.4;
+
     this.possessedBy = null;
 
     // Temporary stick-blade target until the player model
@@ -207,7 +226,8 @@ export class HockeyPuck {
   canBePickedUpBy(player) {
     if (
       this.isPossessed() ||
-      !player
+      !player ||
+      this.pickupCooldown > 0
     ) {
       return false;
     }
@@ -221,24 +241,74 @@ export class HockeyPuck {
       return false;
     }
 
-    const dx =
-      this.position.x -
-      playerPosition.x;
-
-    const dz =
-      this.position.z -
-      playerPosition.z;
-
-    const distance =
-      Math.sqrt(
-        dx * dx +
-        dz * dz
+    const toPuck =
+      new THREE.Vector3(
+        this.position.x -
+          playerPosition.x,
+        0,
+        this.position.z -
+          playerPosition.z
       );
 
-    return (
-      distance <=
-      this.pickupRadius
-    );
+    const distance =
+      toPuck.length();
+
+    if (
+      distance >
+      this.pickupRadius ||
+      distance <
+      0.0001
+    ) {
+      return false;
+    }
+
+    toPuck.normalize();
+
+    const forward =
+      this.getPlayerForward(
+        player
+      );
+
+    // Don't magically collect a puck that's well behind the
+    // skater. Slightly beside the player is still allowed so
+    // mobile pickup remains forgiving.
+    const frontDot =
+      forward.dot(
+        toPuck
+      );
+
+    if (
+      frontDot <
+      this.pickupFrontDot
+    ) {
+      return false;
+    }
+
+    // If the player exposes a real blade control point, the
+    // puck must also be reasonably close to the stick area.
+    if (
+      typeof player.getPuckControlPoint ===
+      "function"
+    ) {
+      player.getPuckControlPoint(
+        this.bladeWorldPosition
+      );
+
+      const bladeDistance =
+        this.bladeWorldPosition
+          .distanceTo(
+            this.position
+          );
+
+      if (
+        bladeDistance >
+        this.pickupRadius * 1.15
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   tryPickup(player) {
@@ -263,6 +333,60 @@ export class HockeyPuck {
 
   drop() {
     this.possessedBy = null;
+    this.pickupCooldown =
+      this.repickupDelay;
+  }
+
+  losePossession(
+    player,
+    outwardDirection = null
+  ) {
+    if (
+      !this.possessedBy
+    ) {
+      return false;
+    }
+
+    const playerVelocity =
+      player?.velocity
+        ? player.velocity.clone()
+        : new THREE.Vector3();
+
+    const releaseDirection =
+      outwardDirection?.clone?.() ??
+      this.getPlayerRight(
+        player
+      );
+
+    releaseDirection.y = 0;
+
+    if (
+      releaseDirection.lengthSq() >
+      0.0001
+    ) {
+      releaseDirection.normalize();
+    }
+
+    this.drop();
+
+    // Keep some of the skater's momentum so losing the puck
+    // during a hard cut looks like a real bobble instead of
+    // the puck freezing in place.
+    this.velocity
+      .copy(
+        playerVelocity
+      )
+      .multiplyScalar(
+        0.58
+      )
+      .addScaledVector(
+        releaseDirection,
+        2.1
+      );
+
+    this.clampVelocity();
+
+    return true;
   }
 
   // ------------------------------------------------
@@ -452,6 +576,47 @@ export class HockeyPuck {
       0,
       0
     );
+
+    // Hard, fast cuts can now cause a bobbled puck if the
+    // puck gets too far from the blade. This is deterministic:
+    // no random turnovers.
+    const controlDistance =
+      this.position.distanceTo(
+        this.carryTarget
+      );
+
+    const hardTurn =
+      Math.abs(
+        turnRate
+      ) >=
+      this.controlBreakTurnRate;
+
+    const movingFast =
+      speed >=
+      this.controlBreakMinSpeed;
+
+    if (
+      hardTurn &&
+      movingFast &&
+      controlDistance >
+        this.controlBreakDistance
+    ) {
+      const side =
+        turnRate >= 0
+          ? -1
+          : 1;
+
+      const outward =
+        right.clone()
+          .multiplyScalar(
+            side
+          );
+
+      this.losePossession(
+        player,
+        outward
+      );
+    }
   }
 
   // ------------------------------------------------
@@ -835,6 +1000,17 @@ export class HockeyPuck {
   // ------------------------------------------------
 
   update(delta, player = null) {
+    if (
+      this.pickupCooldown > 0
+    ) {
+      this.pickupCooldown =
+        Math.max(
+          0,
+          this.pickupCooldown -
+            delta
+        );
+    }
+
     if (
       this.isPossessed()
     ) {
