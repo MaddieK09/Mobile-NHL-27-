@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { createRink } from "./rink.js";
 import { HockeyPlayer } from "./player.js";
 import { Controls } from "./controls.js";
+import { CameraManager, CAMERA_MODES } from "./camera.js";
 // ==================================================
 // MOBILE NHL 27 - MAIN GAME
 // ==================================================
@@ -133,6 +134,21 @@ const player = new HockeyPlayer(scene, {
 // --------------------------------------------------
 
 const controls = new Controls();
+
+// --------------------------------------------------
+// GAMEPLAY CAMERA
+// --------------------------------------------------
+
+const cameraManager = new CameraManager(
+  camera,
+  player,
+  {
+    mode: CAMERA_MODES.DYNAMIC
+  }
+);
+
+// Snap immediately to the closer landscape follow camera.
+cameraManager.update(0);
 // --------------------------------------------------
 // TEMPORARY PUCK
 // --------------------------------------------------
@@ -208,6 +224,9 @@ function animate() {
     delta,
     movement
   );
+
+  cameraManager.update(delta);
+
   // Temporary visual proof that the loop is alive.
   puck.rotation.y += delta * 0.5;
 
@@ -228,5 +247,9 @@ if (loadingScreen) {
   loadingScreen.classList.add("hidden");
 }
 
-console.log("ð Mobile NHL 27 started.");
+console.log("Ã°ÂÂÂ Mobile NHL 27 started.");
 console.log("Rink:", rink);
+console.log(
+  "Camera:",
+  cameraManager.getModeLabel()
+);
