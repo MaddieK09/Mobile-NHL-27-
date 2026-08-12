@@ -21,8 +21,12 @@ export class Controls {
     // consumeAction() clears these after game.js reads them.
     this.actions = {
       shoot: false,
-      pass: false
+      pass: false,
+      shootPressed: false,
+      shootReleased: false
     };
+
+    this.shootHeld = false;
 
     this.joystickActive = false;
 
@@ -294,11 +298,57 @@ export class Controls {
         );
       };
 
-    bindAction(
-      this.shootButton,
-      "shoot"
+    // SHOOT is hold-to-charge, release-to-fire.
+    this.shootButton.addEventListener(
+      "pointerdown",
+      (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!this.shootHeld) {
+          this.actions.shootPressed = true;
+        }
+
+        this.shootHeld = true;
+
+        this.shootButton.style.transform =
+          "scale(0.90)";
+      }
     );
 
+    const releaseShoot =
+      (event) => {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+
+        if (this.shootHeld) {
+          this.actions.shootReleased = true;
+        }
+
+        this.shootHeld = false;
+
+        this.shootButton.style.transform =
+          "scale(1)";
+      };
+
+    this.shootButton.addEventListener(
+      "pointerup",
+      releaseShoot
+    );
+
+    this.shootButton.addEventListener(
+      "pointercancel",
+      releaseShoot
+    );
+
+    this.shootButton.addEventListener(
+      "pointerleave",
+      releaseShoot
+    );
+
+    // PASS stays a quick one-shot action.
     bindAction(
       this.passButton,
       "pass"
@@ -519,13 +569,24 @@ export class Controls {
     }
 
     // Desktop testing:
-    // Space = shoot
+    // Hold Space = charge shot, release = fire
     // E = pass
-    if (
-      pressed &&
-      code === "Space"
-    ) {
-      this.actions.shoot = true;
+    if (code === "Space") {
+      if (
+        pressed &&
+        !this.shootHeld
+      ) {
+        this.actions.shootPressed = true;
+      }
+
+      if (
+        !pressed &&
+        this.shootHeld
+      ) {
+        this.actions.shootReleased = true;
+      }
+
+      this.shootHeld = pressed;
     }
 
     if (
@@ -539,6 +600,30 @@ export class Controls {
   // ------------------------------------------------
   // GET MOVEMENT
   // ------------------------------------------------
+
+  isShootHeld() {
+    return this.shootHeld;
+  }
+
+  consumeShootPressed() {
+    const active =
+      this.actions.shootPressed;
+
+    this.actions.shootPressed =
+      false;
+
+    return active;
+  }
+
+  consumeShootReleased() {
+    const active =
+      this.actions.shootReleased;
+
+    this.actions.shootReleased =
+      false;
+
+    return active;
+  }
 
   consumeAction(actionName) {
     if (
